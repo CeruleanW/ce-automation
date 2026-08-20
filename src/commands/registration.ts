@@ -6,6 +6,8 @@ export const commands = {
   "registration:publish-all": {
     description:
       "Publish registration forms for all ready, unpublished CE Class records",
+    source:
+      "Airtable + Google Drive + Google Forms (registration publish, all)",
     run: async () => {
       await runApiIntegrator("registration:publish-all");
       return undefined;
@@ -14,6 +16,8 @@ export const commands = {
   "registration:publish": {
     description:
       "Publish registration form for a single record (pass --id <recordId>)",
+    source:
+      "Airtable + Google Drive + Google Forms (registration publish, single)",
     run: async (args: string[]) => {
       const { values } = parseArgs({
         args,

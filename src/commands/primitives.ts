@@ -6,6 +6,7 @@ export const commands = {
   "drive:find-folder": {
     description:
       "Find a Google Drive folder by name (pass --name <folderName>)",
+    source: "Google Drive (folder search)",
     run: async (args: string[]) => {
       const { values } = parseArgs({
         args,
@@ -18,6 +19,7 @@ export const commands = {
   },
   "drive:duplicate": {
     description: "Duplicate a Drive file (pass --file-id <id>)",
+    source: "Google Drive (file duplicate)",
     run: async (args: string[]) => {
       const { values } = parseArgs({
         args,
@@ -31,14 +33,17 @@ export const commands = {
   "forms:auth": {
     description:
       "Authenticate the Google Forms Composio connection (opens browser for OAuth)",
+    source: "Composio Google Forms auth",
     run: async () => runApiIntegrator("forms:auth"),
   },
   "forms:status": {
     description: "Show Google Forms Composio connection status (read-only)",
+    source: "Composio Google Forms connection",
     run: async () => runApiIntegrator("forms:status"),
   },
   "gws:exec": {
     description: "Run a raw gws CLI command (pass remaining args)",
+    source: "Google Workspace CLI",
     run: async (args: string[]) => {
       if (args.length === 0)
         throw new Error("Provide the gws command as arguments");
@@ -47,6 +52,7 @@ export const commands = {
   },
   "obsidian:exec": {
     description: "Run a raw Obsidian CLI command (pass remaining args)",
+    source: "Obsidian CLI",
     run: async (args: string[]) => {
       if (args.length === 0)
         throw new Error("Provide the Obsidian command as arguments");

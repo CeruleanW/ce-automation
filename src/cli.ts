@@ -38,6 +38,9 @@ export async function main(argv: string[]): Promise<number> {
   try {
     const result = await command.run(rest);
     if (result !== undefined) {
+      if (command.source) {
+        console.log(`Source: ${command.source}`);
+      }
       console.log(JSON.stringify(result, null, 2));
     }
     return 0;

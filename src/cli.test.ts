@@ -54,6 +54,16 @@ describe("cli main", () => {
     expect(logSpy).toHaveBeenCalledWith(JSON.stringify({ ok: true }, null, 2));
   });
 
+  it("prints Source header before JSON when command has source field", async () => {
+    runApiIntegratorMock.mockResolvedValue({ ok: true });
+    await main(["term:ensure"]);
+    expect(logSpy).toHaveBeenNthCalledWith(1, "Source: Supabase term table");
+    expect(logSpy).toHaveBeenNthCalledWith(
+      2,
+      JSON.stringify({ ok: true }, null, 2),
+    );
+  });
+
   it("forwards args for courses:fetch --id", async () => {
     runApiIntegratorMock.mockResolvedValue({ id: "rec123" });
     await main(["courses:fetch", "--id", "rec123"]);
