@@ -1,0 +1,19 @@
+# Secrets
+.env
+.env.*
+.envrc
+
+# Node
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
