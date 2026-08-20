@@ -103,6 +103,21 @@ describe("runApiIntegrator", () => {
     expect(result).toEqual({ ok: true });
   });
 
+  it("parses JSON after a debug object printed via console.log", async () => {
+    // api-integrator may emit a Composio connection object (single-quoted JS,
+    // not valid JSON) before the actual JSON result.
+    spawnMock.mockReturnValue(
+      makeFakeChild({
+        stdout: [
+          "{ id: 'ca_abc', status: 'ACTIVE', authConfigId: 'ac_xyz' }\n[\"Course A\",\"Course B\"]",
+        ],
+        exitCode: 0,
+      }),
+    );
+    const result = await runApiIntegrator("airtable:fetch-all");
+    expect(result).toEqual(["Course A", "Course B"]);
+  });
+
   it("strips trailing whitespace after JSON", async () => {
     spawnMock.mockReturnValue(
       makeFakeChild({ stdout: ['{"ok":true}\n\n'], exitCode: 0 }),

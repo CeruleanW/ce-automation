@@ -45,15 +45,29 @@ export async function runApiIntegrator(
 }
 
 function parseStdout(cmd: string, stdout: string): unknown {
-  // Strip leading non-JSON bytes (pnpm banners, run-prefix lines).
-  const start = stdout.search(/[{[]/);
-  if (start === -1) {
-    throw new ApiIntegratorParseError(cmd, stdout.slice(-2048));
+  // Collect every position where a JSON document could start.
+  const positions: number[] = [];
+  for (let i = 0; i < stdout.length; i++) {
+    const ch = stdout[i];
+    if (ch === "{" || ch === "[") {
+      positions.push(i);
+    }
   }
-  const trimmed = stdout.slice(start).trimEnd();
-  try {
-    return JSON.parse(trimmed) as unknown;
-  } catch {
-    throw new ApiIntegratorParseError(cmd, trimmed.slice(-2048));
+
+  // Try parsing from each candidate, last to first. api-integrator's CLI may
+  // emit debug output (e.g. a Composio connection object printed via
+  // console.log) before the actual JSON.stringify(result) payload; the real
+  // result is typically the last valid JSON document in stdout.
+  for (let i = positions.length - 1; i >= 0; i--) {
+    const start = positions[i];
+    if (start === undefined) continue;
+    const trimmed = stdout.slice(start).trimEnd();
+    try {
+      return JSON.parse(trimmed) as unknown;
+    } catch {
+      continue;
+    }
   }
+
+  throw new ApiIntegratorParseError(cmd, stdout.slice(-2048));
 }
