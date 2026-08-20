@@ -1,6 +1,6 @@
 # Setup
 
-Getting-started guide for the CE admin. Walks through prerequisites, env provisioning, first-run smoke test, and common troubleshooting.
+Getting-started guide for the CE admin. Walks through prerequisites, env provisioning, first production run, and common troubleshooting.
 
 ## Prerequisites checklist
 
@@ -46,7 +46,7 @@ ce-automation reads its own `.env`. All of its keys are optional:
 # .env (ce-automation)
 API_INTEGRATOR_DIR=/ai-projects/api-integrator
 CE_DRY_RUN=
-CE_COURSE_START_OVERRIDE=
+CE_NOW_OVERRIDE=
 ```
 
 Everything else lives in api-integrator's `.env`. The CE admin provisions it once. Keys the CE admin must set there (names only; values are secrets):
@@ -71,25 +71,25 @@ Everything else lives in api-integrator's `.env`. The CE admin provisions it onc
 
 See api-integrator's `docs/architecture.md` for the canonical env table.
 
-## First-run smoke test
+## First production run
 
-After prerequisites and env are provisioned:
+After prerequisites and env are provisioned. Steps 1–4 are read-only or idempotent verification; step 5 is a real publish that writes a form to Google Drive and a `form-link` back to Airtable — use a record id you intend to publish.
 
 ```bash
 # 1. Install ce-automation deps (once package.json exists per ADR-0003)
 pnpm install
 
-# 2. Verify api-integrator is reachable
+# 2. Verify api-integrator is reachable (read-only)
 pnpm ce forms:status
 # Expect: totalAccounts >= 1, activeConnectionId non-null
 
-# 3. Ensure the current term exists in Supabase
+# 3. Ensure the current term exists in Supabase (idempotent write)
 pnpm ce term:ensure
 
 # 4. List ready courses (read-only)
 pnpm ce courses:ready
 
-# 5. (Optional) Publish a single record's registration form
+# 5. Publish a single record's registration form (writes form + Airtable link)
 pnpm ce registration:publish --id <recordId>
 ```
 
@@ -112,7 +112,7 @@ The next-term table maps current month to next term:
 | Jul – Aug (Summer) | Fall |
 | Sep – Dec (Fall) | Winter (next year) |
 
-If `ce term:ensure` inserts the wrong term, check the system clock on the host running ce-automation. The calc is based on `new Date()`; an off-by-one month or wrong timezone will pick the wrong row. To verify without writing to Supabase, set `CE_COURSE_START_OVERRIDE` to a known date and call `ce courses:ready` to confirm the orchestrator's view of "now".
+If `ce term:ensure` inserts the wrong term, check the system clock on the host running ce-automation. The calc is based on `new Date()`; an off-by-one month or wrong timezone will pick the wrong row. To verify without writing to the production Supabase, point `API_INTEGRATOR_DIR` at a copy of api-integrator whose `.env` references a test Supabase project, then run `ce term:ensure`. Once Op 5 ships, `ce email:send --id <recordId> --dry-run` will let you inspect the computed send deadline against a `CE_NOW_OVERRIDE` date without sending. Note: `ce courses:ready` is a passthrough and does not read "now", so it cannot verify term calc.
 
 ### `ApiIntegratorError: <cmd> exited 1: ...`
 

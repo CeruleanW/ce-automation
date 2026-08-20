@@ -257,12 +257,11 @@ export class BlockedOpError extends Error {
 Pure date math, no I/O. Unit-tested without mocks.
 
 ```ts
-export function nextTerm(month: number, year: number): { name: string; year: number; monthRange: [number, number] };
 export function emailSendDeadline(courseStart: Date): Date;   // Tue, courseStart - 14d rolled forward
 export function promotionDay(courseStart: Date): Date;        // Sun, courseStart - 14d rolled forward
 ```
 
-`CE_COURSE_START_OVERRIDE` env var, when set, overrides `new Date()` only for timing-rule checks inside orchestrators that read it via `RunnerConfig.now`.
+`CE_NOW_OVERRIDE` env var, when set, overrides `new Date()` only for timing-rule checks inside orchestrators that read it via `RunnerConfig.now`.
 
 ## Help output
 

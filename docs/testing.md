@@ -35,7 +35,7 @@ describe('feedback-publish orchestrator', () => {
       return undefined;
     });
 
-    const { publishFeedbackForm } = await import('../../src/orchestrators/feedback-publish.ts');
+    const { publishFeedbackForm } = await import('./feedback-publish.ts');
     const result = await publishFeedbackForm('recXYZ', {
       runApiIntegrator: fakeRun,
       now: () => new Date('2026-09-01T00:00:00Z'),

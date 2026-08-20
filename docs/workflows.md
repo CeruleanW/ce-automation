@@ -179,7 +179,7 @@ Before the course ends, so the QR code (Op 8) can be generated in time.
 3. Resolves the current term folder via `drive:find-folder` (or creates if absent — mechanism TBD).
 4. Moves the duplicated form into the term folder.
 5. Edits the form content — title + description substituted with course fields — via `forms:*` (Drive-auth-config slug for create/move; Forms-auth-config slug for edit). Mirrors Op 2's dual-connection requirement.
-6. Writes the feedback form link back to Airtable via `airtable:fetch-record` and an update call. (api-integrator's `airtable:*` CLI currently exposes only reads; an update path may need to be added there first, or ce-automation may shell out to `gws:exec` for an Airtable update via a Sheets workaround — to be decided during implementation.)
+6. Writes the feedback form link back to Airtable. Path undecided: (a) api-integrator adds an `airtable:update-record` CLI command, (b) ce-automation composes `airtable:fetch-record` + `gws:exec sheets append` only if course data is mirrored to Sheets, or (c) defer the write-back until api-integrator exposes writes. Tracked as part of Op 7 roadmap.
 
 ### Status
 
@@ -260,7 +260,7 @@ Based on current month, the system prepares for the **next** term. Implemented i
 | Jul – Aug (Summer) | Fall | 09 – 12 |
 | Sep – Dec (Fall) | Winter (next year) | 01 – 03 |
 
-ce-automation's `lib/clock.ts` duplicates this table only for email/promote timing computations; the source of truth for term persistence remains api-integrator.
+ce-automation relies on `ce term:ensure` for term persistence; `lib/clock.ts` only computes email/promote deadlines from `courseStart` (course-start − 14d rolled forward to Tuesday/Sunday). The source of truth for the term table itself stays api-integrator.
 
 ### Email send day
 

@@ -73,7 +73,7 @@ Status legend and full per-op steps: `docs/workflows.md`. Full command surface w
 | [`docs/workflows.md`](docs/workflows.md) | The 8-operation lifecycle; primary reference |
 | [`docs/features.md`](docs/features.md) | Command surface, args, delegated commands, JSON shapes, status |
 | [`docs/testing.md`](docs/testing.md) | Test runners, the single mockable boundary, production-data guards |
-| [`docs/setup.md`](docs/setup.md) | Prerequisites, env provisioning, first-run smoke test, troubleshooting |
+| [`docs/setup.md`](docs/setup.md) | Prerequisites, env provisioning, first production run, troubleshooting |
 | [`docs/adr/`](docs/adr/) | Decision records — relationship, invocation, tooling, op responsibility split |
 
 ## Architecture decisions

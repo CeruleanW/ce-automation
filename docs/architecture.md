@@ -115,7 +115,7 @@ Integration tests (`*.spec.ts`) include runtime guards that throw if env vars po
 |---|---|---|---|
 | `API_INTEGRATOR_DIR` | no | Path to api-integrator repo | `/ai-projects/api-integrator` |
 | `CE_DRY_RUN` | no | If `true`, orchestrators log the sequence of `runApiIntegrator` calls without spawning | (unset) |
-| `CE_COURSE_START_OVERRIDE` | no | ISO date; overrides "now" for timing-rule tests of email/promote | (unset) |
+| `CE_NOW_OVERRIDE` | no | ISO date; overrides "now" for timing-rule tests of email/promote | (unset) |
 
 ### Delegated env vars (read by api-integrator via its own `.env`)
 
