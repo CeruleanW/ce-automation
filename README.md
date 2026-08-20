@@ -2,7 +2,7 @@
 
 Thin CLI shell that automates the Church Education (CE) course-publishing lifecycle on top of [`/ai-projects/api-integrator`](../api-integrator). The CE admin runs a handful of `ce` commands per semester to publish registration forms, send announcement emails, create feedback forms, generate QR codes, and control response collection — all without touching the underlying Airtable, Google Drive, Google Forms, Supabase, gws, or Obsidian clients directly.
 
-> Implementation pending [ADR-0003](docs/adr/0003-tooling-baseline-deferred.md). Documentation below describes the target surface; the `ce` command does not exist until ADR-0003 lands and `package.json` is created.
+Implemented commands cover the read-only course-fetch surface (Op 1), registration-form publishing (Op 2), and Supabase term tracking. Roadmap and blocked ops (email, website, promotion, feedback form, QR code) are tracked in `docs/workflows.md`.
 
 ## Goals
 
@@ -49,32 +49,32 @@ pnpm ce registration:publish-all
 
 ## Lifecycle at a glance
 
-| Op | Stage | Command | Status |
-|---|---|---|---|
-| 1 | Before | `ce courses:ready` | implemented |
-| 2 | Before | `ce registration:publish-all` / `--id` | implemented |
-| 3 | Before | `ce website:update` | blocked |
-| 4 | Before | `ce email:create` | roadmap |
-| 5 | Before | `ce email:send` | roadmap |
-| 6 | Before | `ce promote:run` | blocked |
-| 7 | Before | `ce feedback:publish` | roadmap |
-| 8 | Before | `ce qr:generate` | blocked |
-| — | During | `ce registration:stop` | roadmap |
-| — | After | `ce feedback:collect` | roadmap |
-| — | After | `ce feedback:stop` | roadmap |
+| Op  | Stage  | Command                                | Status      |
+| --- | ------ | -------------------------------------- | ----------- |
+| 1   | Before | `ce courses:ready`                     | implemented |
+| 2   | Before | `ce registration:publish-all` / `--id` | implemented |
+| 3   | Before | `ce website:update`                    | blocked     |
+| 4   | Before | `ce email:create`                      | roadmap     |
+| 5   | Before | `ce email:send`                        | roadmap     |
+| 6   | Before | `ce promote:run`                       | blocked     |
+| 7   | Before | `ce feedback:publish`                  | roadmap     |
+| 8   | Before | `ce qr:generate`                       | blocked     |
+| —   | During | `ce registration:stop`                 | roadmap     |
+| —   | After  | `ce feedback:collect`                  | roadmap     |
+| —   | After  | `ce feedback:stop`                     | roadmap     |
 
 Status legend and full per-op steps: `docs/workflows.md`. Full command surface with JSON shapes: `docs/features.md`.
 
 ## Documentation
 
-| Doc | Covers |
-|---|---|
-| [`docs/architecture.md`](docs/architecture.md) | Layered view, module layout, patterns, env vars, dependencies |
-| [`docs/workflows.md`](docs/workflows.md) | The 8-operation lifecycle; primary reference |
-| [`docs/features.md`](docs/features.md) | Command surface, args, delegated commands, JSON shapes, status |
-| [`docs/testing.md`](docs/testing.md) | Test runners, the single mockable boundary, production-data guards |
-| [`docs/setup.md`](docs/setup.md) | Prerequisites, env provisioning, first production run, troubleshooting |
-| [`docs/adr/`](docs/adr/) | Decision records — relationship, invocation, tooling, op responsibility split |
+| Doc                                            | Covers                                                                        |
+| ---------------------------------------------- | ----------------------------------------------------------------------------- |
+| [`docs/architecture.md`](docs/architecture.md) | Layered view, module layout, patterns, env vars, dependencies                 |
+| [`docs/workflows.md`](docs/workflows.md)       | The 8-operation lifecycle; primary reference                                  |
+| [`docs/features.md`](docs/features.md)         | Command surface, args, delegated commands, JSON shapes, status                |
+| [`docs/testing.md`](docs/testing.md)           | Test runners, the single mockable boundary, production-data guards            |
+| [`docs/setup.md`](docs/setup.md)               | Prerequisites, env provisioning, first production run, troubleshooting        |
+| [`docs/adr/`](docs/adr/)                       | Decision records — relationship, invocation, tooling, op responsibility split |
 
 ## Architecture decisions
 

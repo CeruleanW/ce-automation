@@ -228,7 +228,10 @@ Raw passthrough to the Obsidian CLI wrapper.
 The single mockable boundary. All commands and orchestrators call `runApiIntegrator` rather than spawning directly.
 
 ```ts
-export async function runApiIntegrator(cmd: string, args: string[] = []): Promise<unknown>;
+export async function runApiIntegrator(
+  cmd: string,
+  args: string[] = [],
+): Promise<unknown>;
 
 export class ApiIntegratorError extends Error {
   constructor(
@@ -236,17 +239,25 @@ export class ApiIntegratorError extends Error {
     public readonly args: string[],
     public readonly exitCode: number,
     public readonly stderr: string,
-  ) { super(`${cmd} exited ${exitCode}: ${stderr}`); }
+  ) {
+    super(`${cmd} exited ${exitCode}: ${stderr}`);
+  }
 }
 
 export class ApiIntegratorParseError extends Error {
-  constructor(public readonly cmd: string, public readonly stdoutTail: string) {
+  constructor(
+    public readonly cmd: string,
+    public readonly stdoutTail: string,
+  ) {
     super(`${cmd} returned unparseable output: ...${stdoutTail}`);
   }
 }
 
 export class BlockedOpError extends Error {
-  constructor(public readonly command: string, public readonly adr: string) {
+  constructor(
+    public readonly command: string,
+    public readonly adr: string,
+  ) {
     super(`${command} is blocked — see ${adr}`);
   }
 }
@@ -257,8 +268,8 @@ export class BlockedOpError extends Error {
 Pure date math, no I/O. Unit-tested without mocks.
 
 ```ts
-export function emailSendDeadline(courseStart: Date): Date;   // Tue, courseStart - 14d rolled forward
-export function promotionDay(courseStart: Date): Date;        // Sun, courseStart - 14d rolled forward
+export function emailSendDeadline(courseStart: Date): Date; // Tue, courseStart - 14d rolled forward
+export function promotionDay(courseStart: Date): Date; // Sun, courseStart - 14d rolled forward
 ```
 
 `CE_NOW_OVERRIDE` env var, when set, overrides `new Date()` only for timing-rule checks inside orchestrators that read it via `RunnerConfig.now`.

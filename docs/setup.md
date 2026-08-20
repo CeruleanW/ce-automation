@@ -6,7 +6,7 @@ Getting-started guide for the CE admin. Walks through prerequisites, env provisi
 
 ### 1. Node and pnpm
 
-- Node version: TBD by ADR-0003. api-integrator pins `@types/node ^25.0.3`, implying Node 25. Until ADR-0003 lands, install Node 25 to match.
+- Node version: ≥20 (per ADR-0003; `engines.node` field in `package.json`). The CE admin's system runs Node 20.20.2.
 - pnpm: install globally (`corepack enable && corepack prepare pnpm@latest --activate`).
 
 ### 2. api-integrator repo
@@ -51,23 +51,23 @@ CE_NOW_OVERRIDE=
 
 Everything else lives in api-integrator's `.env`. The CE admin provisions it once. Keys the CE admin must set there (names only; values are secrets):
 
-| Key | Purpose |
-|---|---|
-| `COMPOSIO_API_KEY` | Composio SDK authentication |
-| `GOOGLE_API_KEY` | Gemini client (used by api-integrator's `genai:hello`) |
-| `INTEGRATOR_USER_ID` | Composio user id (defaults to `registration-user-001`) |
-| `GOOGLE_FORMS_AUTH_CONFIG_ID` | Forms auth config id (provisioned via the dashboard walkthrough) |
-| `AIRTABLE_TEST_BASE_ID` | Test Airtable base id — MUST point at the dedicated test base, never the production CE Class base |
-| `AIRTABLE_TEST_TABLE_ID` | Test Airtable table id |
-| `GOOGLE_DRIVE_TEST_FOLDER_ID` | Test Drive folder id |
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (bypasses RLS; keep secret) |
-| `GWS_BINARY` | gws binary path (default `gws`) |
-| `GWS_TIMEOUT_MS` | gws spawn timeout (default per api-integrator) |
-| `GWS_DEFAULT_USER_ID` | gws default user id |
-| `OBSIDIAN_BINARY` | Obsidian CLI binary path |
-| `OBSIDIAN_VAULT` | Obsidian vault root path |
-| `OBSIDIAN_TIMEOUT_MS` | Obsidian spawn timeout |
+| Key                           | Purpose                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------- |
+| `COMPOSIO_API_KEY`            | Composio SDK authentication                                                                       |
+| `GOOGLE_API_KEY`              | Gemini client (used by api-integrator's `genai:hello`)                                            |
+| `INTEGRATOR_USER_ID`          | Composio user id (defaults to `registration-user-001`)                                            |
+| `GOOGLE_FORMS_AUTH_CONFIG_ID` | Forms auth config id (provisioned via the dashboard walkthrough)                                  |
+| `AIRTABLE_TEST_BASE_ID`       | Test Airtable base id — MUST point at the dedicated test base, never the production CE Class base |
+| `AIRTABLE_TEST_TABLE_ID`      | Test Airtable table id                                                                            |
+| `GOOGLE_DRIVE_TEST_FOLDER_ID` | Test Drive folder id                                                                              |
+| `SUPABASE_URL`                | Supabase project URL                                                                              |
+| `SUPABASE_SERVICE_ROLE_KEY`   | Supabase service-role key (bypasses RLS; keep secret)                                             |
+| `GWS_BINARY`                  | gws binary path (default `gws`)                                                                   |
+| `GWS_TIMEOUT_MS`              | gws spawn timeout (default per api-integrator)                                                    |
+| `GWS_DEFAULT_USER_ID`         | gws default user id                                                                               |
+| `OBSIDIAN_BINARY`             | Obsidian CLI binary path                                                                          |
+| `OBSIDIAN_VAULT`              | Obsidian vault root path                                                                          |
+| `OBSIDIAN_TIMEOUT_MS`         | Obsidian spawn timeout                                                                            |
 
 See api-integrator's `docs/architecture.md` for the canonical env table.
 
@@ -76,7 +76,7 @@ See api-integrator's `docs/architecture.md` for the canonical env table.
 After prerequisites and env are provisioned. Steps 1–4 are read-only or idempotent verification; step 5 is a real publish that writes a form to Google Drive and a `form-link` back to Airtable — use a record id you intend to publish.
 
 ```bash
-# 1. Install ce-automation deps (once package.json exists per ADR-0003)
+# 1. Install ce-automation deps
 pnpm install
 
 # 2. Verify api-integrator is reachable (read-only)
@@ -105,12 +105,12 @@ The Google Forms Composio auth config is not connected. Either the auth config i
 
 The next-term table maps current month to next term:
 
-| Current | Next |
-|---|---|
-| Jan – Mar (Winter) | Spring |
-| Apr – Jun (Spring) | Summer |
-| Jul – Aug (Summer) | Fall |
-| Sep – Dec (Fall) | Winter (next year) |
+| Current            | Next               |
+| ------------------ | ------------------ |
+| Jan – Mar (Winter) | Spring             |
+| Apr – Jun (Spring) | Summer             |
+| Jul – Aug (Summer) | Fall               |
+| Sep – Dec (Fall)   | Winter (next year) |
 
 If `ce term:ensure` inserts the wrong term, check the system clock on the host running ce-automation. The calc is based on `new Date()`; an off-by-one month or wrong timezone will pick the wrong row. To verify without writing to the production Supabase, point `API_INTEGRATOR_DIR` at a copy of api-integrator whose `.env` references a test Supabase project, then run `ce term:ensure`. Once Op 5 ships, `ce email:send --id <recordId> --dry-run` will let you inspect the computed send deadline against a `CE_NOW_OVERRIDE` date without sending. Note: `ce courses:ready` is a passthrough and does not read "now", so it cannot verify term calc.
 

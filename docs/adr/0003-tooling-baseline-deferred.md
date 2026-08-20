@@ -1,6 +1,6 @@
-# ADR-0003: Tooling baseline deferred
+# ADR-0003: Tooling baseline
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-19
 - Decider: CE admin
 
@@ -14,7 +14,7 @@ api-integrator's current tooling baseline:
 - Tests: **Vitest** for `*.test.ts` unit (mock everything); **Playwright** for `*.spec.ts` integration (real APIs, dedicated test base, runtime guards against production data).
 - **No** `lint`, `typecheck`, `format`, or `build` script. **No** `engines` field. `@types/node` pinned `^25.0.3` implies Node 25.
 
-ce-automation has not started implementation. Three baselines were considered:
+Three baselines were considered:
 
 1. **Mirror api-integrator exactly.** pnpm + tsx + ts-node, same strict ESM TS, Vitest + Playwright, no lint/typecheck/format/build.
 2. **Mirror + add lint/typecheck/format and an `engines` pin.** Same stack, plus eslint, `tsc --noEmit`, prettier, and an `engines.node` field.
@@ -22,28 +22,44 @@ ce-automation has not started implementation. Three baselines were considered:
 
 ## Decision
 
-Defer. Record the three candidates and their tradeoffs; pick one before the first feature command ships. Until then, write no `package.json`, `tsconfig.json`, or test config; write only documentation.
+Adopt **Option 2**. ce-automation mirrors api-integrator's stack (pnpm + tsx + strict ESM TS + Vitest + Playwright) and adds:
 
-This ADR's status flips from **Proposed** to **Accepted** when:
+- `tsc --noEmit` as `pnpm typecheck` — catches JSON-shape typos in command modules before runtime. ce-automation parses api-integrator's JSON output into typed shapes; a typo would otherwise surface only at first run.
+- `eslint` with `typescript-eslint` recommended preset as `pnpm lint` — closes the api-integrator tooling gap. No custom rules; project-neutral.
+- `prettier` with default config as `pnpm format` / `pnpm format:check` — keeps multi-file modules consistent.
+- `engines.node: ">=20"` — matches the runtime the CE admin actually uses (Node 20.20.2 as of 2026-08). `@types/node ^25.0.3` is the types-only pin mirrored from api-integrator and works on Node 20.
 
-- the first `ce` command is implemented, AND
-- the chosen baseline is recorded in the "Decision" section above, AND
-- `docs/architecture.md` and `docs/testing.md` are updated to match.
+No build step. ce-automation stays source-first like api-integrator; the `ce` script runs `tsx src/cli.ts` directly.
 
-## Decision criteria
+## Decision criteria applied
 
-- **Pick Option 1** if ce-automation stays a single-file CLI with no external consumers and the CE admin wants maximum consistency with api-integrator.
-- **Pick Option 2** if ce-automation grows past one CLI file or if the CE admin wants `tsc --noEmit` to catch JSON-shape typos before runtime. Closes the api-integrator tooling gap that api-integrator chose not to fix.
-- **Pick Option 3** if ce-automation is expected to become the future home for shared CE automation code that other projects import as a package. Heaviest; only justified if a second consumer appears.
+- ce-automation grows past one CLI file (`commands/`, `orchestrators/`, `lib/` per `docs/architecture.md`) → Option 1 rejected.
+- The CE admin wants `tsc --noEmit` to catch JSON-shape typos before runtime → Option 2's strongest criterion met.
+- No second consumer of ce-automation exists → Option 3 rejected.
 
-## Consequences of deferring
+## Consequences
 
-- Documentation can be written against any of the three options; all doc examples avoid committing to a build step or lint rules.
-- `docs/architecture.md` describes the module layout in implementation-agnostic terms; `docs/testing.md` describes the test runner contract, not the config.
-- Risk: deferred decision may drift. Trigger: any PR that adds `package.json`.
+- **Positive**: typecheck catches JSON-shape typos before runtime; lint catches dead code and unused imports; format keeps diffs clean across the multi-module layout.
+- **Positive**: `engines.node` pin documents the runtime requirement (Node 20+) that api-integrator left implicit.
+- **Negative**: lint and format add CI surface area. Mitigation: no custom rules; presets only. If friction exceeds value, drop lint first (it's the most opinionated).
+- **Negative**: still source-first — no `dist/`, no `exports` field. Other projects cannot `npm install` ce-automation. Acceptable: no second consumer exists.
+
+## Implementation
+
+Scripts in `package.json`:
+
+- `ce` — `tsx src/cli.ts` (main entry; mirrors api-integrator's `cli` script)
+- `test:vitest` — `vitest` (unit tests, `*.test.ts`)
+- `test` — `playwright test` (integration tests, `*.spec.ts`)
+- `typecheck` — `tsc --noEmit`
+- `lint` — `eslint .`
+- `format` — `prettier --write .`
+- `format:check` — `prettier --check .`
 
 ## References
 
-- api-integrator `package.json` (scripts, deps)
-- api-integrator `tsconfig.json`
+- api-integrator `package.json` (scripts, deps mirrored)
+- api-integrator `tsconfig.json` (strictness mirrored)
 - api-integrator `CLAUDE.md` §Commands
+- `docs/architecture.md` (dependency table updated to match)
+- `docs/testing.md` (run commands updated to match)

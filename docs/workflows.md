@@ -6,37 +6,37 @@ For the per-command JSON shapes, see `docs/features.md`. For the relationship an
 
 ## Status legend
 
-| Status | Meaning |
-|---|---|
-| implemented | Command runs end-to-end against real services |
-| roadmap | Mechanism chosen; implementation pending |
-| blocked | Mechanism undecided; a follow-up ADR is required before implementation |
+| Status      | Meaning                                                                |
+| ----------- | ---------------------------------------------------------------------- |
+| implemented | Command runs end-to-end against real services                          |
+| roadmap     | Mechanism chosen; implementation pending                               |
+| blocked     | Mechanism undecided; a follow-up ADR is required before implementation |
 
 ## Stage map
 
-| Op | Stage | Command | Mode | Status |
-|---|---|---|---|---|
-| 1 | Before | `ce courses:ready` | Passthrough → `airtable:ready-courses` | implemented |
-| 1 | Before | `ce courses:to-be-published` | Passthrough → `airtable:to-be-published` | implemented |
-| 1 | Before | `ce courses:fetch --id` | Passthrough → `airtable:fetch-record --id` | implemented |
-| 2 | Before | `ce registration:publish-all` | Passthrough → `registration:publish-all` | implemented |
-| 2 | Before | `ce registration:publish --id` | Passthrough → `registration:publish --id` | implemented |
-| 3 | Before | `ce website:update` | Local orchestration | blocked |
-| 4 | Before | `ce email:create` | Local orchestration | roadmap |
-| 5 | Before | `ce email:send` | Local orchestration | roadmap |
-| 6 | Before | `ce promote:run` | Local orchestration | blocked |
-| 7 | Before | `ce feedback:publish` | Local orchestration | roadmap |
-| 8 | Before | `ce qr:generate` | Local orchestration | blocked |
-| — | During | `ce registration:stop` | Local orchestration | roadmap |
-| — | After | `ce feedback:collect` | Local orchestration | roadmap |
-| — | After | `ce feedback:stop` | Local orchestration | roadmap |
-| — | Support | `ce term:ensure` | Passthrough → `supabase:ensure-current-term` | implemented |
-| — | Support | `ce drive:find-folder --name` | Passthrough → `drive:find-folder` | implemented |
-| — | Support | `ce drive:duplicate --file-id` | Passthrough → `drive:duplicate` | implemented |
-| — | Support | `ce forms:auth` | Passthrough → `forms:auth` | implemented |
-| — | Support | `ce forms:status` | Passthrough → `forms:status` | implemented |
-| — | Support | `ce gws:exec <args>` | Passthrough → `gws:exec` | implemented |
-| — | Support | `ce obsidian:exec <args>` | Passthrough → `obsidian:exec` | implemented |
+| Op  | Stage   | Command                        | Mode                                         | Status      |
+| --- | ------- | ------------------------------ | -------------------------------------------- | ----------- |
+| 1   | Before  | `ce courses:ready`             | Passthrough → `airtable:ready-courses`       | implemented |
+| 1   | Before  | `ce courses:to-be-published`   | Passthrough → `airtable:to-be-published`     | implemented |
+| 1   | Before  | `ce courses:fetch --id`        | Passthrough → `airtable:fetch-record --id`   | implemented |
+| 2   | Before  | `ce registration:publish-all`  | Passthrough → `registration:publish-all`     | implemented |
+| 2   | Before  | `ce registration:publish --id` | Passthrough → `registration:publish --id`    | implemented |
+| 3   | Before  | `ce website:update`            | Local orchestration                          | blocked     |
+| 4   | Before  | `ce email:create`              | Local orchestration                          | roadmap     |
+| 5   | Before  | `ce email:send`                | Local orchestration                          | roadmap     |
+| 6   | Before  | `ce promote:run`               | Local orchestration                          | blocked     |
+| 7   | Before  | `ce feedback:publish`          | Local orchestration                          | roadmap     |
+| 8   | Before  | `ce qr:generate`               | Local orchestration                          | blocked     |
+| —   | During  | `ce registration:stop`         | Local orchestration                          | roadmap     |
+| —   | After   | `ce feedback:collect`          | Local orchestration                          | roadmap     |
+| —   | After   | `ce feedback:stop`             | Local orchestration                          | roadmap     |
+| —   | Support | `ce term:ensure`               | Passthrough → `supabase:ensure-current-term` | implemented |
+| —   | Support | `ce drive:find-folder --name`  | Passthrough → `drive:find-folder`            | implemented |
+| —   | Support | `ce drive:duplicate --file-id` | Passthrough → `drive:duplicate`              | implemented |
+| —   | Support | `ce forms:auth`                | Passthrough → `forms:auth`                   | implemented |
+| —   | Support | `ce forms:status`              | Passthrough → `forms:status`                 | implemented |
+| —   | Support | `ce gws:exec <args>`           | Passthrough → `gws:exec`                     | implemented |
+| —   | Support | `ce obsidian:exec <args>`      | Passthrough → `obsidian:exec`                | implemented |
 
 ## Op 1 — Fetch course data from source
 
@@ -253,12 +253,12 @@ roadmap. Same dependency as `ce registration:stop`.
 
 Based on current month, the system prepares for the **next** term. Implemented in api-integrator's `features/supabase/term.ts`; ce-automation relies on `ce term:ensure` which shells out to `supabase:ensure-current-term`.
 
-| Current Month | Next Term | Folder Month Range |
-|---|---|---|
-| Jan – Mar (Winter) | Spring | 04 – 06 |
-| Apr – Jun (Spring) | Summer | 07 – 08 |
-| Jul – Aug (Summer) | Fall | 09 – 12 |
-| Sep – Dec (Fall) | Winter (next year) | 01 – 03 |
+| Current Month      | Next Term          | Folder Month Range |
+| ------------------ | ------------------ | ------------------ |
+| Jan – Mar (Winter) | Spring             | 04 – 06            |
+| Apr – Jun (Spring) | Summer             | 07 – 08            |
+| Jul – Aug (Summer) | Fall               | 09 – 12            |
+| Sep – Dec (Fall)   | Winter (next year) | 01 – 03            |
 
 ce-automation relies on `ce term:ensure` for term persistence; `lib/clock.ts` only computes email/promote deadlines from `courseStart` (course-start − 14d rolled forward to Tuesday/Sunday). The source of truth for the term table itself stays api-integrator.
 

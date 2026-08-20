@@ -17,7 +17,10 @@ ADR-0001 chose the thin-CLI-shell relationship. Two invocation mechanisms were c
 Adopt Option 1. ce-automation spawns `pnpm --dir "$API_INTEGRATOR_DIR" cli <cmd> [args...]` as a child process, captures stdout, and parses the trailing `JSON.stringify(result, null, 2)` block. The single boundary lives in `src/lib/shell.ts`:
 
 ```ts
-export async function runApiIntegrator(cmd: string, args: string[] = []): Promise<unknown> {
+export async function runApiIntegrator(
+  cmd: string,
+  args: string[] = [],
+): Promise<unknown> {
   // spawn pnpm --dir <API_INTEGRATOR_DIR> cli <cmd> <args...>
   // on non-zero exit: throw ApiIntegratorError(cmd, stderr, exitCode)
   // on success: parse stdout JSON, return parsed value

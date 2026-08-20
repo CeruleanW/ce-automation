@@ -16,29 +16,29 @@ ADR-0001 chose a thin CLI shell. ADR-0002 chose shell-out invocation. The 8-oper
 
 Per-operation split:
 
-| Op | Stage | Command | Mode | Status |
-|---|---|---|---|---|
-| 1 | Before | `ce courses:ready` | Passthrough → `airtable:ready-courses` | implemented |
-| 1 | Before | `ce courses:to-be-published` | Passthrough → `airtable:to-be-published` | implemented |
-| 1 | Before | `ce courses:fetch --id` | Passthrough → `airtable:fetch-record --id` | implemented |
-| 2 | Before | `ce registration:publish-all` | Passthrough → `registration:publish-all` | implemented |
-| 2 | Before | `ce registration:publish --id` | Passthrough → `registration:publish --id` | implemented |
-| 3 | Before | `ce website:update` | Local orchestration | blocked (mechanism ADR pending) |
-| 4 | Before | `ce email:create` | Local orchestration | roadmap |
-| 5 | Before | `ce email:send` | Local orchestration | roadmap |
-| 6 | Before | `ce promote:run` | Local orchestration | blocked (channel ADR pending) |
-| 7 | Before | `ce feedback:publish` | Local orchestration | roadmap |
-| 8 | Before | `ce qr:generate` | Local orchestration | blocked (generator ADR pending) |
-| — | During | `ce registration:stop` | Local orchestration | roadmap |
-| — | After | `ce feedback:collect` | Local orchestration | roadmap |
-| — | After | `ce feedback:stop` | Local orchestration | roadmap |
-| — | Support | `ce term:ensure` | Passthrough → `supabase:ensure-current-term` | implemented |
-| — | Support | `ce drive:find-folder --name` | Passthrough → `drive:find-folder` | implemented |
-| — | Support | `ce drive:duplicate --file-id` | Passthrough → `drive:duplicate` | implemented |
-| — | Support | `ce forms:auth` | Passthrough → `forms:auth` | implemented |
-| — | Support | `ce forms:status` | Passthrough → `forms:status` | implemented |
-| — | Support | `ce gws:exec <args>` | Passthrough → `gws:exec` | implemented |
-| — | Support | `ce obsidian:exec <args>` | Passthrough → `obsidian:exec` | implemented |
+| Op  | Stage   | Command                        | Mode                                         | Status                          |
+| --- | ------- | ------------------------------ | -------------------------------------------- | ------------------------------- |
+| 1   | Before  | `ce courses:ready`             | Passthrough → `airtable:ready-courses`       | implemented                     |
+| 1   | Before  | `ce courses:to-be-published`   | Passthrough → `airtable:to-be-published`     | implemented                     |
+| 1   | Before  | `ce courses:fetch --id`        | Passthrough → `airtable:fetch-record --id`   | implemented                     |
+| 2   | Before  | `ce registration:publish-all`  | Passthrough → `registration:publish-all`     | implemented                     |
+| 2   | Before  | `ce registration:publish --id` | Passthrough → `registration:publish --id`    | implemented                     |
+| 3   | Before  | `ce website:update`            | Local orchestration                          | blocked (mechanism ADR pending) |
+| 4   | Before  | `ce email:create`              | Local orchestration                          | roadmap                         |
+| 5   | Before  | `ce email:send`                | Local orchestration                          | roadmap                         |
+| 6   | Before  | `ce promote:run`               | Local orchestration                          | blocked (channel ADR pending)   |
+| 7   | Before  | `ce feedback:publish`          | Local orchestration                          | roadmap                         |
+| 8   | Before  | `ce qr:generate`               | Local orchestration                          | blocked (generator ADR pending) |
+| —   | During  | `ce registration:stop`         | Local orchestration                          | roadmap                         |
+| —   | After   | `ce feedback:collect`          | Local orchestration                          | roadmap                         |
+| —   | After   | `ce feedback:stop`             | Local orchestration                          | roadmap                         |
+| —   | Support | `ce term:ensure`               | Passthrough → `supabase:ensure-current-term` | implemented                     |
+| —   | Support | `ce drive:find-folder --name`  | Passthrough → `drive:find-folder`            | implemented                     |
+| —   | Support | `ce drive:duplicate --file-id` | Passthrough → `drive:duplicate`              | implemented                     |
+| —   | Support | `ce forms:auth`                | Passthrough → `forms:auth`                   | implemented                     |
+| —   | Support | `ce forms:status`              | Passthrough → `forms:status`                 | implemented                     |
+| —   | Support | `ce gws:exec <args>`           | Passthrough → `gws:exec`                     | implemented                     |
+| —   | Support | `ce obsidian:exec <args>`      | Passthrough → `obsidian:exec`                | implemented                     |
 
 ## Constraint on local orchestration
 

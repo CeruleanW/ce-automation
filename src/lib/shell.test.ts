@@ -1,0 +1,168 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { EventEmitter } from "node:events";
+
+const spawnMock = vi.fn();
+vi.mock("node:child_process", () => ({
+  spawn: (...args: unknown[]) => spawnMock(...args),
+}));
+
+vi.mock("../config.ts", () => ({
+  getIntegratorDir: () => "/fake/integrator",
+  isDryRun: () => false,
+  getNowOverride: () => undefined,
+  now: () => new Date("2026-08-19T00:00:00Z"),
+}));
+
+const { runApiIntegrator } = await import("./shell.ts");
+
+interface FakeStream extends EventEmitter {
+  setEncoding: (_: string) => void;
+}
+
+interface FakeChild extends EventEmitter {
+  stdout: FakeStream;
+  stderr: FakeStream;
+}
+
+interface FakeChildOptions {
+  stdout?: string[];
+  stderr?: string[];
+  exitCode?: number | null;
+  error?: Error;
+}
+
+function makeFakeChild(opts: FakeChildOptions): FakeChild {
+  const stdout = new EventEmitter() as FakeStream;
+  const stderr = new EventEmitter() as FakeStream;
+  stdout.setEncoding = () => {};
+  stderr.setEncoding = () => {};
+  const child = Object.assign(new EventEmitter(), {
+    stdout,
+    stderr,
+  }) as FakeChild;
+  queueMicrotask(() => {
+    for (const chunk of opts.stdout ?? []) {
+      stdout.emit("data", chunk);
+    }
+    for (const chunk of opts.stderr ?? []) {
+      stderr.emit("data", chunk);
+    }
+    if (opts.error) {
+      child.emit("error", opts.error);
+    } else {
+      child.emit("exit", opts.exitCode ?? 0);
+    }
+  });
+  return child;
+}
+
+beforeEach(() => {
+  spawnMock.mockReset();
+});
+
+describe("runApiIntegrator", () => {
+  it("parses JSON stdout on success", async () => {
+    spawnMock.mockReturnValue(
+      makeFakeChild({ stdout: ['{"id":"rec123","fields":{}}'], exitCode: 0 }),
+    );
+    const result = await runApiIntegrator("airtable:fetch-record", [
+      "--id",
+      "rec123",
+    ]);
+    expect(result).toEqual({ id: "rec123", fields: {} });
+    expect(spawnMock).toHaveBeenCalledWith(
+      "pnpm",
+      [
+        "--dir",
+        "/fake/integrator",
+        "cli",
+        "airtable:fetch-record",
+        "--id",
+        "rec123",
+      ],
+      { stdio: ["ignore", "pipe", "pipe"] },
+    );
+  });
+
+  it("parses JSON array stdout", async () => {
+    spawnMock.mockReturnValue(
+      makeFakeChild({ stdout: ["[1,2,3]"], exitCode: 0 }),
+    );
+    const result = await runApiIntegrator("airtable:fetch-all");
+    expect(result).toEqual([1, 2, 3]);
+  });
+
+  it("strips leading non-JSON banners before parsing", async () => {
+    spawnMock.mockReturnValue(
+      makeFakeChild({
+        stdout: ['pnpm v10.34.5\nRunning\n{"ok":true}'],
+        exitCode: 0,
+      }),
+    );
+    const result = await runApiIntegrator("forms:status");
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("strips trailing whitespace after JSON", async () => {
+    spawnMock.mockReturnValue(
+      makeFakeChild({ stdout: ['{"ok":true}\n\n'], exitCode: 0 }),
+    );
+    const result = await runApiIntegrator("forms:status");
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("throws ApiIntegratorError on non-zero exit", async () => {
+    spawnMock.mockReturnValue(
+      makeFakeChild({
+        stdout: [],
+        stderr: ["command failed\nsecond line"],
+        exitCode: 1,
+      }),
+    );
+    await expect(
+      runApiIntegrator("registration:publish", ["--id", "rec123"]),
+    ).rejects.toMatchObject({
+      name: "ApiIntegratorError",
+      cmd: "registration:publish",
+      exitCode: 1,
+      stderr: "second line",
+    });
+  });
+
+  it("throws ApiIntegratorError on spawn error", async () => {
+    spawnMock.mockReturnValue(
+      makeFakeChild({ exitCode: null, error: new Error("ENOENT") }),
+    );
+    await expect(runApiIntegrator("term:ensure")).rejects.toMatchObject({
+      name: "ApiIntegratorError",
+      cmd: "term:ensure",
+      exitCode: 1,
+    });
+  });
+
+  it("throws ApiIntegratorParseError when stdout has no JSON", async () => {
+    spawnMock.mockReturnValue(
+      makeFakeChild({ stdout: ["no json here"], exitCode: 0 }),
+    );
+    await expect(runApiIntegrator("genai:hello")).rejects.toMatchObject({
+      name: "ApiIntegratorParseError",
+      cmd: "genai:hello",
+    });
+  });
+
+  it("throws ApiIntegratorParseError when stdout is malformed JSON", async () => {
+    spawnMock.mockReturnValue(
+      makeFakeChild({ stdout: ["{not valid"], exitCode: 0 }),
+    );
+    await expect(runApiIntegrator("genai:hello")).rejects.toMatchObject({
+      name: "ApiIntegratorParseError",
+      cmd: "genai:hello",
+    });
+  });
+
+  it("uses default integrator dir when env not set (covered by mock)", async () => {
+    spawnMock.mockReturnValue(makeFakeChild({ stdout: ["{}"], exitCode: 0 }));
+    await runApiIntegrator("term:ensure");
+    expect(spawnMock.mock.calls[0]?.[1]?.[1]).toBe("/fake/integrator");
+  });
+});

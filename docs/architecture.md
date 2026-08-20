@@ -42,23 +42,19 @@ See:
 
 ## Module layout
 
-Proposed `src/` structure (implementation pending ADR-0003):
+Current `src/` structure (per ADR-0003, Option 2):
 
 ```
 src/
-├── cli.ts                      ENTRY: argv dispatcher, mirrors api-integrator/cli.ts pattern
-├── config.ts                   getIntegratorUserId(), env readers, API_INTEGRATOR_DIR resolution
-├── commands/                   per-op command modules — thin wrappers
+├── run.ts                       ENTRY: top-level await; calls main() with process.argv.slice(2); loads dotenv
+├── cli.ts                       Dispatcher: argv → command module; exports testable main(argv): Promise<number>
+├── config.ts                    getIntegratorDir(), isDryRun(), getNowOverride(), now() env readers
+├── commands/                   per-op command modules — thin wrappers (implemented)
 │   ├── courses.ts              ce courses:* (Airtable passthrough)
 │   ├── registration.ts         ce registration:*
-│   ├── feedback.ts             ce feedback:*
-│   ├── email.ts                ce email:*
-│   ├── website.ts              ce website:*
-│   ├── promote.ts              ce promote:*
-│   ├── qr.ts                   ce qr:*
 │   ├── term.ts                 ce term:* (Supabase passthrough)
 │   └── primitives.ts          ce drive:* / forms:* / gws:* / obsidian:* passthroughs
-├── orchestrators/              local multi-step logic for ops not one-to-one with api-integrator
+├── orchestrators/              (roadmap — not yet created) local multi-step logic for ops #3-#8
 │   ├── website-update.ts      op 3 — blocked pending mechanism ADR
 │   ├── email-create.ts        op 4
 │   ├── email-send.ts          op 5
@@ -69,9 +65,10 @@ src/
 │   ├── feedback-collect.ts    after-course
 │   └── feedback-stop.ts       after-course
 └── lib/
-    ├── shell.ts                runApiIntegrator(cmd, args) — spawn pnpm, parse JSON
-    ├── clock.ts                pure date math: term calc, email/promote timing rules
-    └── errors.ts               ApiIntegratorError, ApiIntegratorParseError, BlockedOpError
+    ├── shell.ts                runApiIntegrator(cmd, args) — spawn pnpm, parse JSON; RunnerConfig interface
+    ├── clock.ts                pure date math: emailSendDeadline(), promotionDay() (UTC)
+    ├── errors.ts               ApiIntegratorError, ApiIntegratorParseError, BlockedOpError
+    └── command.ts              Command / CommandMap types
 ```
 
 **Co-location rule**: every command in `commands/` and every orchestrator in `orchestrators/` has a paired unit test (`*.test.ts`) in the same directory, mirroring api-integrator's co-location convention.
@@ -80,7 +77,7 @@ src/
 
 ### 1. Command dispatcher shape
 
-`src/cli.ts` mirrors api-integrator's `src/cli.ts` lines 27-201: a `commands` object literal keyed by command name, each entry `{ description, run(args) }`. `main()` reads `process.argv.slice(2)`, dispatches, prints `JSON.stringify(result, null, 2)` on success, writes to `console.error` on failure, exits 1 on error.
+`src/cli.ts` mirrors api-integrator's `src/cli.ts` lines 27-201: a `commands` object literal keyed by command name, each entry `{ description, run(args) }`. `main(argv)` takes argv as a parameter (testable), dispatches, prints `JSON.stringify(result, null, 2)` on success, writes to `console.error` on failure, returns an exit code. `src/run.ts` is the actual entry: reads `process.argv.slice(2)`, calls `main`, and `process.exit`s on non-zero.
 
 ### 2. `parseArgs` for flags
 
@@ -111,11 +108,11 @@ Integration tests (`*.spec.ts`) include runtime guards that throw if env vars po
 
 ### Own env vars (read by ce-automation)
 
-| Var | Required | Purpose | Default |
-|---|---|---|---|
-| `API_INTEGRATOR_DIR` | no | Path to api-integrator repo | `/ai-projects/api-integrator` |
-| `CE_DRY_RUN` | no | If `true`, orchestrators log the sequence of `runApiIntegrator` calls without spawning | (unset) |
-| `CE_NOW_OVERRIDE` | no | ISO date; overrides "now" for timing-rule tests of email/promote | (unset) |
+| Var                  | Required | Purpose                                                                                | Default                       |
+| -------------------- | -------- | -------------------------------------------------------------------------------------- | ----------------------------- |
+| `API_INTEGRATOR_DIR` | no       | Path to api-integrator repo                                                            | `/ai-projects/api-integrator` |
+| `CE_DRY_RUN`         | no       | If `true`, orchestrators log the sequence of `runApiIntegrator` calls without spawning | (unset)                       |
+| `CE_NOW_OVERRIDE`    | no       | ISO date; overrides "now" for timing-rule tests of email/promote                       | (unset)                       |
 
 ### Delegated env vars (read by api-integrator via its own `.env`)
 
@@ -133,18 +130,19 @@ ce-automation's `docs/setup.md` lists the subset the CE admin must provision bef
 
 ## Dependency table
 
-TBD per ADR-0003. Minimum viable set (independent of baseline choice):
+Per ADR-0003 (Option 2: mirror + typecheck/format/lint + engines). No build step.
 
-| Package | Purpose |
-|---|---|
-| `tsx` | TS execution for `pnpm ce` |
-| `dotenv` | `.env` loader (mirrors api-integrator) |
-| `@types/node` | Node type defs (version pins Node target) |
-| `typescript` | TS compiler / type checker |
-| `vitest` | Unit test runner (`*.test.ts`) |
-| `@playwright/test` | Integration test runner (`*.spec.ts`) |
-
-Final pin set recorded in `package.json` once ADR-0003 lands.
+| Package                                     | Purpose                                                      |
+| ------------------------------------------- | ------------------------------------------------------------ |
+| `tsx`                                       | TS execution for `pnpm ce`                                   |
+| `dotenv`                                    | `.env` loader (mirrors api-integrator)                       |
+| `@types/node`                               | Node type defs (pinned `^25.0.3` to match api-integrator)    |
+| `typescript`                                | TS compiler (`tsc --noEmit` for typecheck)                   |
+| `tslib`                                     | Required by tsconfig `esModuleInterop` helpers               |
+| `vitest`                                    | Unit test runner (`*.test.ts`)                               |
+| `@playwright/test`                          | Integration test runner (`*.spec.ts`)                        |
+| `eslint`, `@eslint/js`, `typescript-eslint` | Lint (typescript-eslint recommended preset, no custom rules) |
+| `prettier`                                  | Format (default config)                                      |
 
 ## What ce-automation does NOT own
 

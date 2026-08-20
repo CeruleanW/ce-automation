@@ -4,17 +4,15 @@ ce-automation inherits api-integrator's two-runner model: Vitest for unit tests,
 
 ## Test runners
 
-| Runner | Pattern | Purpose | Requires |
-|---|---|---|---|
-| Vitest | `*.test.ts` | Unit tests; mock all external dependencies including `runApiIntegrator` | nothing (no credentials) |
+| Runner     | Pattern     | Purpose                                                                                         | Requires                                                               |
+| ---------- | ----------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Vitest     | `*.test.ts` | Unit tests; mock all external dependencies including `runApiIntegrator`                         | nothing (no credentials)                                               |
 | Playwright | `*.spec.ts` | Integration tests; run real `ce` commands against the real api-integrator CLI and real services | api-integrator `.env` provisioned, dedicated test base, runtime guards |
 
-Config files (Vitest `vitest.config.ts`, Playwright `playwright.config.ts`) will mirror api-integrator's:
+Config files mirror api-integrator's, plus the Option 2 additions (see ADR-0003):
 
 - Vitest matches `src/**/*.test.ts` only (so `*.spec.ts` is left to Playwright).
 - Playwright: `testDir: './src'`, `testMatch: '**/*.spec.ts'`, `fullyParallel: true`, `reporter: 'html'`, `trace: 'on-first-retry'`, CI-keyed retries and worker count.
-
-Final config is recorded when ADR-0003 lands.
 
 ## The single mockable boundary
 
@@ -23,29 +21,31 @@ Final config is recorded when ADR-0003 lands.
 Pattern (ported from api-integrator's "register mock before dynamic import" convention):
 
 ```ts
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } from "vitest";
 
-describe('feedback-publish orchestrator', () => {
-  it('duplicates the feedback template and writes the link back', async () => {
+describe("feedback-publish orchestrator", () => {
+  it("duplicates the feedback template and writes the link back", async () => {
     const calls: Array<{ cmd: string; args: string[] }> = [];
     const fakeRun = vi.fn(async (cmd: string, args: string[] = []) => {
       calls.push({ cmd, args });
-      if (cmd === 'drive:duplicate') return { id: 'form-new-123', name: 'Feedback — Test Course' };
-      if (cmd === 'airtable:fetch-record') return { id: args[1], fields: { title: 'Test Course', /* … */ } };
+      if (cmd === "drive:duplicate")
+        return { id: "form-new-123", name: "Feedback — Test Course" };
+      if (cmd === "airtable:fetch-record")
+        return { id: args[1], fields: { title: "Test Course" /* … */ } };
       return undefined;
     });
 
-    const { publishFeedbackForm } = await import('./feedback-publish.ts');
-    const result = await publishFeedbackForm('recXYZ', {
+    const { publishFeedbackForm } = await import("./feedback-publish.ts");
+    const result = await publishFeedbackForm("recXYZ", {
       runApiIntegrator: fakeRun,
-      now: () => new Date('2026-09-01T00:00:00Z'),
+      now: () => new Date("2026-09-01T00:00:00Z"),
     });
 
-    expect(result.feedbackFormId).toBe('form-new-123');
+    expect(result.feedbackFormId).toBe("form-new-123");
     expect(calls.map((c) => c.cmd)).toEqual([
-      'airtable:fetch-record',
-      'drive:duplicate',
-      'drive:find-folder',
+      "airtable:fetch-record",
+      "drive:duplicate",
+      "drive:find-folder",
       // … forms edit, airtable update
     ]);
   });
@@ -59,12 +59,12 @@ The `RunnerConfig` injection (see `docs/architecture.md` §Patterns ported from 
 `src/lib/clock.ts` is pure date math. Tests call its functions directly with fixed `Date` inputs:
 
 ```ts
-describe('clock', () => {
-  it('picks Tuesday two weeks before course start', () => {
-    const start = new Date('2026-09-20'); // Sunday
+describe("clock", () => {
+  it("picks Tuesday two weeks before course start", () => {
+    const start = new Date("2026-09-20"); // Sunday
     const deadline = emailSendDeadline(start);
     expect(deadline.getDay()).toBe(2); // Tuesday
-    expect(deadline.getTime()).toBe(new Date('2026-09-08').getTime()); // 12 days earlier, Tuesday
+    expect(deadline.getTime()).toBe(new Date("2026-09-08").getTime()); // 12 days earlier, Tuesday
   });
 });
 ```
@@ -107,15 +107,19 @@ Per command group:
 Mirroring api-integrator's pattern, every `*.spec.ts` that could touch Airtable or Drive includes at the top:
 
 ```ts
-const PROD_BASE = 'appXXXXXXXXXXXXX'; // production CE Class base id
-const PROD_ROOT = '0XXXXXXXXXXXXXXXX'; // production root Drive folder id
+const PROD_BASE = "appXXXXXXXXXXXXX"; // production CE Class base id
+const PROD_ROOT = "0XXXXXXXXXXXXXXXX"; // production root Drive folder id
 
 test.beforeAll(() => {
   if (process.env.AIRTABLE_TEST_BASE_ID === PROD_BASE) {
-    throw new Error('Refusing to run integration tests against the production Airtable base');
+    throw new Error(
+      "Refusing to run integration tests against the production Airtable base",
+    );
   }
   if (process.env.GOOGLE_DRIVE_TEST_FOLDER_ID === PROD_ROOT) {
-    throw new Error('Refusing to run integration tests against the production Drive folder');
+    throw new Error(
+      "Refusing to run integration tests against the production Drive folder",
+    );
   }
 });
 ```
@@ -124,21 +128,24 @@ Exact production IDs are recorded in api-integrator's `features/airtable/constan
 
 ## Run commands
 
-Final commands land with ADR-0003. Until then, expect them to mirror api-integrator:
+Mirrors api-integrator plus the Option 2 additions (see ADR-0003):
 
 - `pnpm test:vitest` — unit tests (no credentials needed).
 - `pnpm test` — integration tests (requires env and API access).
+- `pnpm typecheck` — `tsc --noEmit`; catches JSON-shape typos in command modules.
+- `pnpm lint` — `eslint .` (typescript-eslint recommended preset, no custom rules).
+- `pnpm format:check` — `prettier --check .`; run before committing.
 
 ## Doc maintenance
 
 When modifying source under `src/`, update the relevant doc to stay in sync:
 
-| Doc File | Covers |
-|---|---|
+| Doc File               | Covers                                          |
+| ---------------------- | ----------------------------------------------- |
 | `docs/architecture.md` | Module layout, patterns, env vars, dependencies |
-| `docs/features.md` | Command surface, JSON shapes, status |
-| `docs/testing.md` | Test runners, patterns, mockable boundary |
-| `docs/workflows.md` | Lifecycle operations, status, timing rules |
+| `docs/features.md`     | Command surface, JSON shapes, status            |
+| `docs/testing.md`      | Test runners, patterns, mockable boundary       |
+| `docs/workflows.md`    | Lifecycle operations, status, timing rules      |
 
 Update docs when:
 
