@@ -110,9 +110,9 @@ Email create (Op 4) and send (Op 5).
 ### `ce email:create --id <recordId>`
 
 - **Args**: `--id <recordId>` (required)
-- **Delegates to (locally composed)**: `airtable:fetch-record --id`, `supabase:ensure-current-term`, `obsidian:exec` (or inline template) for body rendering.
-- **Returns**: rendered email body (target shape; storage TBD).
-- **Status**: roadmap
+- **Delegates to (locally composed)**: `airtable:fetch-record --id` for course data; inline TS template for body rendering.
+- **Returns**: `{ recordId, term, subject, body }` — rendered email draft as JSON. Description uses `short-description-for-news-or-poster` if non-blank, else `long-description`; lines with blank values are dropped.
+- **Status**: implemented
 
 ### `ce email:send --id <recordId>`
 

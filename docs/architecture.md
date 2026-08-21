@@ -54,9 +54,9 @@ src/
 │   ├── registration.ts         ce registration:*
 │   ├── term.ts                 ce term:* (Supabase passthrough)
 │   └── primitives.ts          ce drive:* / forms:* / gws:* / obsidian:* passthroughs
-├── orchestrators/              (roadmap — not yet created) local multi-step logic for ops #3-#8
+├── orchestrators/              local multi-step logic for ops #3-#8 (email-create implemented; rest roadmap/blocked)
 │   ├── website-update.ts      op 3 — blocked pending mechanism ADR
-│   ├── email-create.ts        op 4
+│   ├── email-create.ts        op 4 — implemented (inline template, returns JSON draft)
 │   ├── email-send.ts          op 5
 │   ├── promote-run.ts         op 6 — blocked pending channel ADR
 │   ├── feedback-publish.ts    op 7

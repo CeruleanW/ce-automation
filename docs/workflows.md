@@ -22,7 +22,7 @@ For the per-command JSON shapes, see `docs/features.md`. For the relationship an
 | 2   | Before  | `ce registration:publish-all`  | Passthrough → `registration:publish-all`     | implemented |
 | 2   | Before  | `ce registration:publish --id` | Passthrough → `registration:publish --id`    | implemented |
 | 3   | Before  | `ce website:update`            | Local orchestration                          | blocked     |
-| 4   | Before  | `ce email:create`              | Local orchestration                          | roadmap     |
+| 4   | Before  | `ce email:create`              | Local orchestration                          | implemented |
 | 5   | Before  | `ce email:send`                | Local orchestration                          | roadmap     |
 | 6   | Before  | `ce promote:run`               | Local orchestration                          | blocked     |
 | 7   | Before  | `ce feedback:publish`          | Local orchestration                          | roadmap     |
@@ -113,17 +113,17 @@ blocked. The website platform and push mechanism are undecided. Follow-up ADR re
 
 Before the email send deadline (Op 5).
 
-### Steps (target)
+### Steps
 
 1. `ce email:create` orchestrator fetches the course via `airtable:fetch-record --id`.
-2. Resolves the current term via `supabase:ensure-current-term`.
-3. Loads the email template — mechanism likely `obsidian:exec` search/read against the CE email-template note, or an inline template literal. To be confirmed during implementation.
-4. Substitutes course-field placeholders (title, schedule, target audience, teacher, location, registration form link).
-5. Stores the rendered email body — likely as an Obsidian note via `obsidian:exec` create/append, or returned as JSON for the CE admin to review.
+2. Renders an inline TS template literal with course-field substitution (title, description, target audience, schedule, time, location, teacher, registration form link, note). Description uses `short-description-for-news-or-poster` if non-blank, else `long-description`. Lines whose substituted value is blank are dropped.
+3. Returns the rendered email as JSON (`{ recordId, term, subject, body }`) for the CE admin to review or pipe to `ce email:send` (Op 5, not yet implemented).
+
+No Obsidian dependency yet — the template is inline. No `supabase:ensure-current-term` side effect — the course's `term` field is read directly from the Airtable record.
 
 ### Status
 
-roadmap.
+implemented.
 
 ## Op 5 — Send email
 
