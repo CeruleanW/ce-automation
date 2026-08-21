@@ -82,6 +82,7 @@ Status legend and full per-op steps: `docs/workflows.md`. Full command surface w
 - [ADR-0002 Shell out to api-integrator CLI and parse JSON stdout](docs/adr/0002-shell-out-to-api-integrator-cli.md) — accepted
 - [ADR-0003 Tooling baseline deferred](docs/adr/0003-tooling-baseline-deferred.md) — proposed
 - [ADR-0004 Op orchestration responsibility split](docs/adr/0004-op-orchestration-responsibility-split.md) — accepted
+- [ADR-0005 Email recipients for `ce email:send`](docs/adr/0005-email-recipients-mechanism.md) — accepted
 
 Follow-up ADRs needed for blocked ops (Op 3 website mechanism, Op 6 promote channel, Op 8 QR generator) before those commands can move from `blocked` to `implemented`.
 
