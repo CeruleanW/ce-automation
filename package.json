@@ -9,6 +9,7 @@
   },
   "scripts": {
     "ce": "tsx src/run.ts",
+    "check:gws": "tsx scripts/check-gws-auth.ts",
     "test:vitest": "vitest",
     "test": "playwright test",
     "typecheck": "tsc --noEmit",

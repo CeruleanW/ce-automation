@@ -16,6 +16,8 @@ Getting-started guide for the CE admin. Walks through prerequisites, env provisi
 
 ### 3. Google Workspace CLI (`gws`)
 
+Full reference including automation and troubleshooting: `docs/gws-authentication.md`.
+
 - Install: `npm install -g @googleworkspace/cli`
 - Authenticate (select services: drive, gmail, sheets, forms):
   ```bash
