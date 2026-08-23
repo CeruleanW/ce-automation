@@ -1,6 +1,6 @@
 # Testing
 
-ce-automation inherits api-integrator's two-runner model: Vitest for unit tests, Playwright for integration tests. The single mockable boundary is `runApiIntegrator` (see `docs/features.md`).
+ce-automation inherits api-integrator's two-runner model: Vitest for unit tests, Playwright for integration tests. The mockable boundaries are `runApiIntegrator` (api-integrator calls) and `checkGwsAuth` (gws binary spawn), both injected via `RunnerConfig` (see `docs/features.md`).
 
 ## Test runners
 
@@ -16,7 +16,7 @@ Config files mirror api-integrator's, plus the Option 2 additions (see ADR-0003)
 
 ## The single mockable boundary
 
-`src/lib/shell.ts`'s `runApiIntegrator(cmd, args)` is the only I/O seam in ce-automation. Unit tests mock it; they never spawn a real process.
+`src/lib/shell.ts`'s `runApiIntegrator(cmd, args)` is the only I/O seam for api-integrator calls. `src/lib/gws-auth.ts`'s `checkGwsAuth()` is a second I/O seam (it spawns the `gws` binary directly, not via api-integrator). Both are injected via `RunnerConfig`; unit tests mock both and never spawn a real process.
 
 Pattern (ported from api-integrator's "register mock before dynamic import" convention):
 
@@ -39,6 +39,11 @@ describe("feedback-publish orchestrator", () => {
     const result = await publishFeedbackForm("recXYZ", {
       runApiIntegrator: fakeRun,
       now: () => new Date("2026-09-01T00:00:00Z"),
+      checkGwsAuth: vi.fn(async () => ({
+        auth_method: "oauth",
+        credential_source: "file",
+        storage: "encrypted",
+      })),
     });
 
     expect(result.feedbackFormId).toBe("form-new-123");
@@ -52,7 +57,7 @@ describe("feedback-publish orchestrator", () => {
 });
 ```
 
-The `RunnerConfig` injection (see `docs/architecture.md` §Patterns ported from api-integrator) is what makes this work — orchestrators never import `runApiIntegrator` directly; they receive it as a parameter.
+The `RunnerConfig` injection (see `docs/architecture.md` §Patterns ported from api-integrator) is what makes this work — orchestrators never import `runApiIntegrator` or `checkGwsAuth` directly; they receive them as parameters.
 
 ## Pure modules (no mocks needed)
 

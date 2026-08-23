@@ -14,6 +14,11 @@ function makeConfig(
       return undefined;
     }),
     now: () => new Date("2026-09-01T00:00:00Z"),
+    checkGwsAuth: vi.fn(async () => ({
+      auth_method: "oauth",
+      credential_source: "file",
+      storage: "encrypted",
+    })),
   };
 }
 

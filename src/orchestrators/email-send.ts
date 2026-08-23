@@ -9,6 +9,11 @@
  * Real sends are never exercised in unit tests — `runApiIntegrator` is the
  * single mockable boundary (see `docs/testing.md`). Integration tests must
  * gate a real send behind `CE_DRY_RUN=true` or `test.skip`.
+ *
+ * Before the real `gws:exec` send, the orchestrator runs the pre-flight
+ * `config.checkGwsAuth()` gate so an unauthenticated gws surfaces with
+ * remediation hints instead of a confusing 401. The gate is skipped on
+ * dry-run and before-deadline paths (neither touches gws).
  */
 import type { RunnerConfig } from "../lib/shell.ts";
 import { emailSendDeadline } from "../lib/clock.ts";
@@ -140,6 +145,8 @@ export async function sendEmail(
       sendArgs,
     };
   }
+
+  await config.checkGwsAuth();
 
   const result = await config.runApiIntegrator("gws:exec", sendArgs);
   return {

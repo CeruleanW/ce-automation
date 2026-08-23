@@ -1,10 +1,19 @@
 import { spawn } from "node:child_process";
 import { getIntegratorDir } from "../config.ts";
 import { ApiIntegratorError, ApiIntegratorParseError } from "./errors.ts";
+import type { AuthStatus } from "./gws-auth.ts";
 
 export interface RunnerConfig {
   runApiIntegrator: (cmd: string, args?: string[]) => Promise<unknown>;
   now: () => Date;
+  /**
+   * Pre-flight gws auth gate. Orchestrators that call `gws:exec` invoke
+   * this before the real send so a missing-login failure surfaces with
+   * remediation hints instead of a confusing 401. The real implementation
+   * (spawns `gws auth status`) is supplied by the command layer; unit
+   * tests inject a mock. See `docs/gws-authentication.md`.
+   */
+  checkGwsAuth: () => Promise<AuthStatus>;
 }
 
 export async function runApiIntegrator(

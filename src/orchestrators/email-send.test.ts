@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { sendEmail } = await import("./email-send.ts");
 import type { RunnerConfig } from "../lib/shell.ts";
+import { GwsAuthError } from "../lib/gws-auth.ts";
 
 interface Call {
   cmd: string;
@@ -17,6 +18,11 @@ function makeConfig(
     exitCode: 0,
   },
   nowIso = "2026-09-01T00:00:00Z",
+  checkGwsAuth: RunnerConfig["checkGwsAuth"] = vi.fn(async () => ({
+    auth_method: "oauth",
+    credential_source: "file",
+    storage: "encrypted",
+  })),
 ): RunnerConfig {
   return {
     runApiIntegrator: vi.fn(async (cmd: string, args: string[] = []) => {
@@ -26,6 +32,7 @@ function makeConfig(
       return undefined;
     }),
     now: () => new Date(nowIso),
+    checkGwsAuth,
   };
 }
 
@@ -302,6 +309,98 @@ describe("sendEmail", () => {
         sent: false,
         plannedSendAt: "2026-09-08T00:00:00.000Z",
       });
+      expect(calls.some((c) => c.cmd === GWS_SEND)).toBe(false);
+    });
+  });
+
+  describe("gws auth gate", () => {
+    it("runs the gate before gws:exec on a real send", async () => {
+      const calls: Call[] = [];
+      const gate = vi.fn(async () => ({
+        auth_method: "oauth",
+        credential_source: "file",
+        storage: "encrypted",
+      }));
+      await sendEmail(
+        "recXYZ",
+        makeConfig(
+          courseRecord,
+          calls,
+          undefined,
+          "2026-09-10T00:00:00Z",
+          gate,
+        ),
+        { to: "admin@church.example" },
+      );
+      expect(gate).toHaveBeenCalledTimes(1);
+      const sendIdx = calls.findIndex((c) => c.cmd === GWS_SEND);
+      expect(sendIdx).toBeGreaterThan(-1);
+    });
+
+    it("does not run the gate on dry-run", async () => {
+      const gate = vi.fn(async () => ({
+        auth_method: "oauth",
+        credential_source: "file",
+        storage: "encrypted",
+      }));
+      await sendEmail(
+        "recXYZ",
+        makeConfig(courseRecord, [], undefined, "2026-09-10T00:00:00Z", gate),
+        { to: "admin@church.example", dryRun: true },
+      );
+      expect(gate).not.toHaveBeenCalled();
+    });
+
+    it("does not run the gate before the deadline (no send)", async () => {
+      const gate = vi.fn(async () => ({
+        auth_method: "oauth",
+        credential_source: "file",
+        storage: "encrypted",
+      }));
+      await sendEmail(
+        "recXYZ",
+        makeConfig(courseRecord, [], undefined, "2026-09-01T00:00:00Z", gate),
+        { to: "admin@church.example" },
+      );
+      expect(gate).not.toHaveBeenCalled();
+    });
+
+    it("does not run the gate when recipients are missing (throws first)", async () => {
+      const gate = vi.fn(async () => ({
+        auth_method: "oauth",
+        credential_source: "file",
+        storage: "encrypted",
+      }));
+      await expect(
+        sendEmail(
+          "recXYZ",
+          makeConfig(courseRecord, [], undefined, "2026-09-10T00:00:00Z", gate),
+          {},
+        ),
+      ).rejects.toThrow(/No email recipients/);
+      expect(gate).not.toHaveBeenCalled();
+    });
+
+    it("rethrows GwsAuthError from the gate and skips gws:exec", async () => {
+      const calls: Call[] = [];
+      const gate = vi.fn(async () => {
+        throw new GwsAuthError(
+          "gws auth status: auth_method=none storage=none",
+        );
+      });
+      await expect(
+        sendEmail(
+          "recXYZ",
+          makeConfig(
+            courseRecord,
+            calls,
+            undefined,
+            "2026-09-10T00:00:00Z",
+            gate,
+          ),
+          { to: "admin@church.example" },
+        ),
+      ).rejects.toThrow(/gws is not authenticated/);
       expect(calls.some((c) => c.cmd === GWS_SEND)).toBe(false);
     });
   });

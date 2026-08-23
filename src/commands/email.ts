@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import type { CommandMap } from "../lib/command.ts";
 import { runApiIntegrator } from "../lib/shell.ts";
+import { checkGwsAuth } from "../lib/gws-auth.ts";
 import { createEmail } from "../orchestrators/email-create.ts";
 import { sendEmail } from "../orchestrators/email-send.ts";
 import { isDryRun, now } from "../config.ts";
@@ -17,7 +18,7 @@ export const commands = {
       });
       const id = values["id"];
       if (!id) throw new Error("Missing required --id <recordId>");
-      return createEmail(id, { runApiIntegrator, now });
+      return createEmail(id, { runApiIntegrator, now, checkGwsAuth });
     },
   },
   "email:send": {
@@ -38,7 +39,7 @@ export const commands = {
       const to = values["to"];
       return sendEmail(
         id,
-        { runApiIntegrator, now },
+        { runApiIntegrator, now, checkGwsAuth },
         {
           ...(to !== undefined && { to }),
           force: values["force"] === true,

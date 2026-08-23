@@ -58,7 +58,7 @@ src/
 ├── orchestrators/              local multi-step logic for ops #3-#8 (email-create + email-send implemented; rest roadmap/blocked)
 │   ├── website-update.ts      op 3 — blocked pending mechanism ADR
 │   ├── email-create.ts        op 4 — implemented (inline template, returns JSON draft; exports pure renderEmailDraft for Op 5 reuse)
-│   ├── email-send.ts          op 5 — implemented (timing rule + ADR-0005 recipients + gws:exec send / CE_DRY_RUN)
+│       ├── email-send.ts          op 5 — implemented (timing rule + ADR-0005 recipients + pre-flight gws auth gate + gws:exec send / CE_DRY_RUN)
 │   ├── promote-run.ts         op 6 — blocked pending channel ADR
 │   ├── feedback-publish.ts    op 7
 │   ├── qr-generate.ts         op 8 — blocked pending generator ADR
@@ -67,6 +67,7 @@ src/
 │   └── feedback-stop.ts       after-course
 └── lib/
     ├── shell.ts                runApiIntegrator(cmd, args) — spawn pnpm, parse JSON; RunnerConfig interface
+    ├── gws-auth.ts             checkGwsAuth() — pre-flight gws auth gate (spawns `gws auth status`, parses JSON); GwsAuthError + AuthStatus
     ├── clock.ts                pure date math: emailSendDeadline(), promotionDay() (UTC)
     ├── errors.ts               ApiIntegratorError, ApiIntegratorParseError, BlockedOpError, MissingRecipientsError, MissingStartDateError
     └── command.ts              Command / CommandMap types
@@ -96,10 +97,11 @@ Each orchestrator takes a `RunnerConfig` parameter defaulting to production:
 export interface RunnerConfig {
   runApiIntegrator: (cmd: string, args?: string[]) => Promise<unknown>;
   now: () => Date;
+  checkGwsAuth: () => Promise<AuthStatus>;
 }
 ```
 
-Production wiring passes the real `runApiIntegrator` and `() => new Date()`. Unit tests pass a fake `runApiIntegrator` that returns scripted JSON, and a fixed `now` for deterministic timing-rule tests. Mirrors api-integrator's `AirtableConfig` injection pattern in `features/airtable/airtable-api.ts`.
+Production wiring passes the real `runApiIntegrator`, `() => new Date()`, and the real `checkGwsAuth` (spawns `gws auth status` — see `lib/gws-auth.ts`). Unit tests pass a fake `runApiIntegrator` that returns scripted JSON, a fixed `now` for deterministic timing-rule tests, and a mock `checkGwsAuth` so the gws auth gate never spawns a real process. Mirrors api-integrator's `AirtableConfig` injection pattern in `features/airtable/airtable-api.ts`.
 
 ### 5. Production-data guards
 

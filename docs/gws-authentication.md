@@ -29,11 +29,11 @@ always earlier in that block. When the block is too noisy, debug auth at the
 `gws auth login` needs an OAuth client before it can open the consent page.
 Any one of:
 
-| Option             | How                                                                                          | Notes                                                                        |
-| ------------------ | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| GCP wizard         | `gws auth setup`                                                                             | Requires `gcloud`; creates/uses a GCP project and OAuth client for you        |
+| Option             | How                                                                                                 | Notes                                                                           |
+| ------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| GCP wizard         | `gws auth setup`                                                                                    | Requires `gcloud`; creates/uses a GCP project and OAuth client for you          |
 | Client secret file | Download `client_secret.json` from Google Cloud Console, save to `~/.config/gws/client_secret.json` | Field layout template: `client_secret_template.json` in the api-integrator repo |
-| Env vars           | `GOOGLE_WORKSPACE_CLI_CLIENT_ID` + `GOOGLE_WORKSPACE_CLI_CLIENT_SECRET`                       | Useful when you cannot write to `~/.config/gws/`                              |
+| Env vars           | `GOOGLE_WORKSPACE_CLI_CLIENT_ID` + `GOOGLE_WORKSPACE_CLI_CLIENT_SECRET`                             | Useful when you cannot write to `~/.config/gws/`                                |
 
 Without a client, `gws auth login` prints `401: No OAuth client configured.`
 
@@ -57,12 +57,12 @@ gws auth login -s drive,gmail,sheets,forms
 
 `gws auth status` reports every artifact. After a successful login:
 
-| Path / field                        | Purpose                                       |
-| ----------------------------------- | --------------------------------------------- |
-| `~/.config/gws/client_secret.json`  | The OAuth client (file option above)           |
-| `~/.config/gws/credentials.enc`     | Encrypted OAuth tokens written by `login`      |
-| `~/.config/gws/credentials.json`    | Plain-token alternative read when present      |
-| token cache dir                     | Refreshed automatically on subsequent calls    |
+| Path / field                       | Purpose                                     |
+| ---------------------------------- | ------------------------------------------- |
+| `~/.config/gws/client_secret.json` | The OAuth client (file option above)        |
+| `~/.config/gws/credentials.enc`    | Encrypted OAuth tokens written by `login`   |
+| `~/.config/gws/credentials.json`   | Plain-token alternative read when present   |
+| token cache dir                    | Refreshed automatically on subsequent calls |
 
 Tokens refresh automatically afterwards; re-login is only needed after
 `gws auth logout`, credential revocation, or moving to a new machine (copying
@@ -83,20 +83,22 @@ the JSON, not trust the exit code. Any Gmail call returning
 
 ## Automating it
 
-| Step                                              | Automatable? |
-| ------------------------------------------------- | ------------ |
-| Install `@googleworkspace/cli` globally            | yes          |
-| Place `client_secret.json` / set client env vars   | yes          |
-| Browser consent (`auth login`)                     | no — human, once per machine |
-| Check auth state (`auth status` JSON)              | yes          |
-| Provision credentials headless (`GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE`) | yes |
-| Re-auth when tokens revoked/expired                | human        |
+| Step                                                                     | Automatable?                 |
+| ------------------------------------------------------------------------ | ---------------------------- |
+| Install `@googleworkspace/cli` globally                                  | yes                          |
+| Place `client_secret.json` / set client env vars                         | yes                          |
+| Browser consent (`auth login`)                                           | no — human, once per machine |
+| Check auth state (`auth status` JSON)                                    | yes                          |
+| Provision credentials headless (`GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE`) | yes                          |
+| Re-auth when tokens revoked/expired                                      | human                        |
 
 Two patterns:
 
 1. **Workstation (this repo's default).** Do the interactive login once, then
-   gate every automated run behind `pnpm check:gws`, which fails fast with
-   remediation hints when auth is missing (see `scripts/check-gws-auth.ts`).
+   every `ce email:send` run executes the `checkGwsAuth` gate inline before
+   the real send — it fails fast with remediation hints when auth is missing
+   (see `src/lib/gws-auth.ts`). A standalone `pnpm check:gws` wrapper exists
+   for CI or wrapper scripts that want to verify auth before any Op 5 step.
    Wire it into CI or a wrapper script before Op 5.
 2. **Headless / CI.** Complete `gws auth export` on a browser machine, store the
    resulting credentials JSON in your secret manager, and point
@@ -109,16 +111,16 @@ Two patterns:
 
 Exact errors observed in practice, top layer to bottom:
 
-| Symptom                                                                                                | Layer            | Cause / fix                                                     |
-| ------------------------------------------------------------------------------------------------------ | ---------------- | --------------------------------------------------------------- |
-| `airtable:fetch-record exited 1: …For help, run: pnpm help run`                                          | ce-automation     | `API_INTEGRATOR_DIR` points at a missing repo or one without a `cli` script; the real error is above the pnpm footer in the same block |
-| `You installed esbuild for another platform ... @esbuild/linux-arm64 vs darwin-arm64`                    | api-integrator    | `node_modules` copied from another OS; run `pnpm install --force` there |
-| `The "args" argument must be of type object. Received type string ('gmail +send ...')`                   | api-integrator    | Its cli.ts joined args into one string before `execFile`; pass the array |
-| `gws command failed (exit 1): <composed body echoed>`                                                    | api-integrator    | Real error is above/below the echoed body in the full stderr block; run the same `gws ...` call directly |
-| `401 Access denied. No credentials provided.`                                                            | gws               | Not logged in: run `gws auth login -s drive,gmail,sheets,forms`  |
-| `401 No OAuth client configured.`                                                                       | gws               | Provide `client_secret.json`, client env vars, or `gws auth setup` |
-| `401 No encrypted credentials found.`                                                                   | gws               | Client exists but login never completed: run `gws auth login`    |
-| `restricted_client` during consent                                                                       | Google            | Caused by `--full` scopes on an unverified app; use `-s` scoping |
+| Symptom                                                                                | Layer          | Cause / fix                                                                                                                            |
+| -------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `airtable:fetch-record exited 1: …For help, run: pnpm help run`                        | ce-automation  | `API_INTEGRATOR_DIR` points at a missing repo or one without a `cli` script; the real error is above the pnpm footer in the same block |
+| `You installed esbuild for another platform ... @esbuild/linux-arm64 vs darwin-arm64`  | api-integrator | `node_modules` copied from another OS; run `pnpm install --force` there                                                                |
+| `The "args" argument must be of type object. Received type string ('gmail +send ...')` | api-integrator | Its cli.ts joined args into one string before `execFile`; pass the array                                                               |
+| `gws command failed (exit 1): <composed body echoed>`                                  | api-integrator | Real error is above/below the echoed body in the full stderr block; run the same `gws ...` call directly                               |
+| `401 Access denied. No credentials provided.`                                          | gws            | Not logged in: run `gws auth login -s drive,gmail,sheets,forms`                                                                        |
+| `401 No OAuth client configured.`                                                      | gws            | Provide `client_secret.json`, client env vars, or `gws auth setup`                                                                     |
+| `401 No encrypted credentials found.`                                                  | gws            | Client exists but login never completed: run `gws auth login`                                                                          |
+| `restricted_client` during consent                                                     | Google         | Caused by `--full` scopes on an unverified app; use `-s` scoping                                                                       |
 
 Debug recipe: reproduce at the bottom of the chain first —
 
