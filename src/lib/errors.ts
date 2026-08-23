@@ -5,7 +5,8 @@ export class ApiIntegratorError extends Error {
   public readonly stderr: string;
 
   constructor(cmd: string, args: string[], exitCode: number, stderr: string) {
-    super(`${cmd} exited ${exitCode}: ${stderr}`);
+    const body = stderr.length > 2000 ? `…${stderr.slice(-2000)}` : stderr;
+    super(`${cmd} exited ${exitCode}:\n${body}`);
     this.name = "ApiIntegratorError";
     this.cmd = cmd;
     this.args = args;

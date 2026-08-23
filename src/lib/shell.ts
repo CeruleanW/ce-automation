@@ -37,8 +37,7 @@ export async function runApiIntegrator(
   });
 
   if (exitCode !== 0) {
-    const lastLine = stderr.trim().split("\n").pop() ?? "";
-    throw new ApiIntegratorError(cmd, args, exitCode ?? -1, lastLine);
+    throw new ApiIntegratorError(cmd, args, exitCode ?? -1, stderr.trim());
   }
 
   return parseStdout(cmd, stdout);

@@ -16,9 +16,11 @@ pnpm ce email:send              <- ce-automation (this repo)
 ce-automation never handles tokens. It shells out twice; only the innermost
 process (`gws`) talks to Google. When `gws` is unauthenticated the outer layers
 report it poorly: api-integrator wraps stderr as `gws command failed (exit N)`,
-and ce-automation surfaces only the **last** stderr line (src/lib/shell.ts),
-which for `gmail +send` is usually an echo of the composed email body, not the
-error. Always debug auth at the `gws` layer directly.
+and ce-automation surfaces the **full** stderr from the spawned `pnpm` process
+(src/lib/shell.ts) — which includes pnpm's own footer lines (`For help, run:
+pnpm help run`, ` ELIFECYCLE …`) after the real error. The real cause is
+always earlier in that block. When the block is too noisy, debug auth at the
+`gws` layer directly.
 
 ## One-time interactive setup
 
@@ -109,10 +111,10 @@ Exact errors observed in practice, top layer to bottom:
 
 | Symptom                                                                                                | Layer            | Cause / fix                                                     |
 | ------------------------------------------------------------------------------------------------------ | ---------------- | --------------------------------------------------------------- |
-| `airtable:fetch-record exited 1: For help, run: pnpm help run`                                          | ce-automation     | `API_INTEGRATOR_DIR` points at a missing repo or one without a `cli` script |
+| `airtable:fetch-record exited 1: …For help, run: pnpm help run`                                          | ce-automation     | `API_INTEGRATOR_DIR` points at a missing repo or one without a `cli` script; the real error is above the pnpm footer in the same block |
 | `You installed esbuild for another platform ... @esbuild/linux-arm64 vs darwin-arm64`                    | api-integrator    | `node_modules` copied from another OS; run `pnpm install --force` there |
 | `The "args" argument must be of type object. Received type string ('gmail +send ...')`                   | api-integrator    | Its cli.ts joined args into one string before `execFile`; pass the array |
-| `gws command failed (exit 1): <composed body echoed>`                                                    | api-integrator    | Real error is hidden above/below; run the same `gws ...` call directly |
+| `gws command failed (exit 1): <composed body echoed>`                                                    | api-integrator    | Real error is above/below the echoed body in the full stderr block; run the same `gws ...` call directly |
 | `401 Access denied. No credentials provided.`                                                            | gws               | Not logged in: run `gws auth login -s drive,gmail,sheets,forms`  |
 | `401 No OAuth client configured.`                                                                       | gws               | Provide `client_secret.json`, client env vars, or `gws auth setup` |
 | `401 No encrypted credentials found.`                                                                   | gws               | Client exists but login never completed: run `gws auth login`    |

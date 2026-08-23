@@ -140,7 +140,7 @@ describe("runApiIntegrator", () => {
       name: "ApiIntegratorError",
       cmd: "registration:publish",
       exitCode: 1,
-      stderr: "second line",
+      stderr: "command failed\nsecond line",
     });
   });
 
