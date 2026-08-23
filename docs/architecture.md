@@ -48,16 +48,17 @@ Current `src/` structure (per ADR-0003, Option 2):
 src/
 ├── run.ts                       ENTRY: top-level await; calls main() with process.argv.slice(2); loads dotenv
 ├── cli.ts                       Dispatcher: argv → command module; exports testable main(argv): Promise<number>
-├── config.ts                    getIntegratorDir(), isDryRun(), getNowOverride(), now() env readers
+├── config.ts                    getIntegratorDir(), isDryRun(), getNowOverride(), now(), getEmailRecipients(), parseRecipientList() env readers
 ├── commands/                   per-op command modules — thin wrappers (implemented)
 │   ├── courses.ts              ce courses:* (Airtable passthrough)
 │   ├── registration.ts         ce registration:*
 │   ├── term.ts                 ce term:* (Supabase passthrough)
+│   ├── email.ts                ce email:create + email:send (Op 4 + Op 5)
 │   └── primitives.ts          ce drive:* / forms:* / gws:* / obsidian:* passthroughs
-├── orchestrators/              local multi-step logic for ops #3-#8 (email-create implemented; rest roadmap/blocked)
+├── orchestrators/              local multi-step logic for ops #3-#8 (email-create + email-send implemented; rest roadmap/blocked)
 │   ├── website-update.ts      op 3 — blocked pending mechanism ADR
-│   ├── email-create.ts        op 4 — implemented (inline template, returns JSON draft)
-│   ├── email-send.ts          op 5
+│   ├── email-create.ts        op 4 — implemented (inline template, returns JSON draft; exports pure renderEmailDraft for Op 5 reuse)
+│   ├── email-send.ts          op 5 — implemented (timing rule + ADR-0005 recipients + gws:exec send / CE_DRY_RUN)
 │   ├── promote-run.ts         op 6 — blocked pending channel ADR
 │   ├── feedback-publish.ts    op 7
 │   ├── qr-generate.ts         op 8 — blocked pending generator ADR
@@ -67,7 +68,7 @@ src/
 └── lib/
     ├── shell.ts                runApiIntegrator(cmd, args) — spawn pnpm, parse JSON; RunnerConfig interface
     ├── clock.ts                pure date math: emailSendDeadline(), promotionDay() (UTC)
-    ├── errors.ts               ApiIntegratorError, ApiIntegratorParseError, BlockedOpError
+    ├── errors.ts               ApiIntegratorError, ApiIntegratorParseError, BlockedOpError, MissingRecipientsError, MissingStartDateError
     └── command.ts              Command / CommandMap types
 ```
 

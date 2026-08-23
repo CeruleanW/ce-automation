@@ -21,6 +21,8 @@ Getting-started guide for the CE admin. Walks through prerequisites, env provisi
   ```bash
   gws auth login -s drive,gmail,sheets,forms
   ```
+  This opens a browser for OAuth consent — **run it on a machine with a browser**. Headless environments (servers, CI, remote shells without X forwarding) cannot complete the OAuth flow. There is no device-code or service-account fallback for personal Gmail accounts: service accounts require Google Workspace domain-wide delegation and do not work with `@gmail.com` senders. If gws is already authenticated on another machine, copying `~/.config/gws/` (client_secret.json + credentials) to the target machine works, but the OAuth tokens may need refresh on first use.
+- Verify before first send: `gws auth status` should report `"auth_method": "oauth"` and `credential_source` other than `"none"`.
 - Used by ce-automation for Op 5 (email send) and any `ce gws:exec` passthrough.
 
 ### 4. Obsidian CLI
@@ -95,6 +97,30 @@ pnpm ce registration:publish --id <recordId>
 
 If step 2 returns zero accounts, run `pnpm ce forms:auth` (opens a browser for OAuth) and re-check.
 
+### First real email send (Op 5)
+
+Sending an announcement email is a real Gmail send — it cannot be undone. Before the first send, verify gws Gmail auth and dry-run the payload:
+
+```bash
+# 1. Verify gws is authenticated (run on a machine with gws auth completed)
+gws auth status
+# Expect: auth_method=oauth, credential_source != none
+
+# 2. Dry-run: render the email + show send args without calling gws
+CE_DRY_RUN=true pnpm ce email:send --id <recordId> --to <addr@example.com> --force
+# Review subject, body, recipients, sendArgs in the JSON output
+
+# 3. Real send (drops CE_DRY_RUN)
+pnpm ce email:send --id <recordId> --to <addr@example.com> --force
+# Expect: { recordId, sent: true, sentAt, messageId }
+
+# 4. Without --force, the timing rule applies:
+#    send proceeds only on/after emailSendDeadline(start-date) = Tue, start − 14d rolled forward
+pnpm ce email:send --id <recordId> --to <addr@example.com>
+```
+
+If `--to` is omitted, recipients fall back to `CE_EMAIL_RECIPIENTS` in `.env` (per ADR-0005). If neither is set, the orchestrator throws `MissingRecipientsError` before calling gws — no email is sent.
+
 ## Troubleshooting
 
 ### `forms:status` reports zero active connections
@@ -112,7 +138,23 @@ The next-term table maps current month to next term:
 | Jul – Aug (Summer) | Fall               |
 | Sep – Dec (Fall)   | Winter (next year) |
 
-If `ce term:ensure` inserts the wrong term, check the system clock on the host running ce-automation. The calc is based on `new Date()`; an off-by-one month or wrong timezone will pick the wrong row. To verify without writing to the production Supabase, point `API_INTEGRATOR_DIR` at a copy of api-integrator whose `.env` references a test Supabase project, then run `ce term:ensure`. Once Op 5 ships, `ce email:send --id <recordId> --dry-run` will let you inspect the computed send deadline against a `CE_NOW_OVERRIDE` date without sending. Note: `ce courses:ready` is a passthrough and does not read "now", so it cannot verify term calc.
+If `ce term:ensure` inserts the wrong term, check the system clock on the host running ce-automation. The calc is based on `new Date()`; an off-by-one month or wrong timezone will pick the wrong row. To verify without writing to the production Supabase, point `API_INTEGRATOR_DIR` at a copy of api-integrator whose `.env` references a test Supabase project, then run `ce term:ensure`. For Op 5, `CE_NOW_OVERRIDE=<ISO date> CE_DRY_RUN=true pnpm ce email:send --id <recordId>` inspects the computed send deadline and rendered payload against a fixed "now" without sending. Note: `ce courses:ready` is a passthrough and does not read "now", so it cannot verify term calc.
+
+### `ApiIntegratorError: gws:exec exited 1: ... Application Default Credentials (ADC) ...`
+
+gws is not authenticated. Run `gws auth status` to confirm (`auth_method: none`). Fix: run `gws auth login -s gmail` on a machine with a browser. See §Prerequisites 3 for the headless limitation. If you only need to preview the email, use `CE_DRY_RUN=true pnpm ce email:send ... --force` — it renders the payload without calling gws, so no auth is required.
+
+### `ApiIntegratorError: gws:exec exited 1: ... unrecognized subcommand ...`
+
+The gws CLI version installed does not match the subcommand shape ce-automation emits (`gmail +send --to --subject --body`). Check `gws --version` and `gws gmail +send --help`. If the `+send` helper is unavailable in your gws version, upgrade gws (`npm install -g @googleworkspace/cli`) or file an issue — do not change the arg shape without updating `docs/features.md` and the Op 5 unit tests.
+
+### `MissingRecipientsError: No email recipients ...`
+
+Neither `--to` nor `CE_EMAIL_RECIPIENTS` resolved any address. Pass `--to <addr1,addr2,...>` or set `CE_EMAIL_RECIPIENTS` in `.env`. The orchestrator throws before calling gws, so no email is sent.
+
+### `MissingStartDateError: Course <id> has no start-date ...`
+
+The Airtable record has no `start-date` field, so `emailSendDeadline` cannot be computed. Fix the record in Airtable (add a `start-date`), or use `--force` (still requires `start-date` to render — this error is thrown before the timing-rule check).
 
 ### `ApiIntegratorError: <cmd> exited 1: ...`
 

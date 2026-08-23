@@ -116,10 +116,12 @@ Email create (Op 4) and send (Op 5).
 
 ### `ce email:send --id <recordId>`
 
-- **Args**: `--id <recordId>` (required); `--force` (optional) to bypass the timing-rule check.
-- **Delegates to (locally composed)**: `lib/clock.ts` computes the send deadline (Tuesday +2 wks before course start); on/after deadline, calls `gws:exec gmail messages send ...` with the rendered body from `ce email:create`.
-- **Returns**: `{ recordId, sentAt, messageId }` (target shape).
-- **Status**: roadmap
+- **Args**: `--id <recordId>` (required); `--to <addr1,addr2,...>` (optional, overrides `CE_EMAIL_RECIPIENTS` for this invocation per ADR-0005); `--force` (optional boolean, bypasses the timing-rule check).
+- **Delegates to (locally composed)**: `airtable:fetch-record --id` (single fetch — needs `start-date` for the timing rule and the same fields Op 4 renders); `lib/clock.ts` `emailSendDeadline` computes the send deadline (Tuesday +2 wks before course start); the Op 4 `renderEmailDraft` pure function re-renders subject + body; on/after the deadline (or with `--force`), `gws:exec gmail +send --to <addr> ... --subject <s> --body <b>` sends via the gws CLI's high-level `+send` helper (which handles RFC 5322 MIME + base64 internally).
+- **Recipient resolution**: `--to` flag (comma-separated, trimmed, empties dropped) → `CE_EMAIL_RECIPIENTS` env var → `MissingRecipientsError`. Never silently sends to nobody.
+- **Returns**: `{ recordId, sent: false, plannedSendAt }` when before the deadline and `--force` is not set; `{ recordId, sent: true, sentAt, messageId }` after a successful send (`messageId` from `result.data.id`, `null` if absent); `{ recordId, sent: false, dryRun: true, recipients, subject, body, sendArgs }` when `CE_DRY_RUN=true` (no gws call).
+- **Errors raised**: `MissingRecipientsError`, `MissingStartDateError`, `ApiIntegratorError` (gws send failure).
+- **Status**: implemented
 
 ## Group: `website`
 

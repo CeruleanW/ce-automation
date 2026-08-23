@@ -2,7 +2,7 @@
 
 Thin CLI shell that automates the Church Education (CE) course-publishing lifecycle on top of [`/ai-projects/api-integrator`](../api-integrator). The CE admin runs a handful of `ce` commands per semester to publish registration forms, send announcement emails, create feedback forms, generate QR codes, and control response collection — all without touching the underlying Airtable, Google Drive, Google Forms, Supabase, gws, or Obsidian clients directly.
 
-Implemented commands cover the read-only course-fetch surface (Op 1), registration-form publishing (Op 2), and Supabase term tracking. Roadmap and blocked ops (email, website, promotion, feedback form, QR code) are tracked in `docs/workflows.md`.
+Implemented commands cover the read-only course-fetch surface (Op 1), registration-form publishing (Op 2), Supabase term tracking, announcement email create + send (Op 4 + Op 5). Roadmap and blocked ops (website, promotion, feedback form, QR code) are tracked in `docs/workflows.md`.
 
 ## Goals
 
@@ -54,8 +54,8 @@ pnpm ce registration:publish-all
 | 1   | Before | `ce courses:ready`                     | implemented |
 | 2   | Before | `ce registration:publish-all` / `--id` | implemented |
 | 3   | Before | `ce website:update`                    | blocked     |
-| 4   | Before | `ce email:create`                      | roadmap     |
-| 5   | Before | `ce email:send`                        | roadmap     |
+| 4   | Before | `ce email:create`                      | implemented |
+| 5   | Before | `ce email:send`                        | implemented |
 | 6   | Before | `ce promote:run`                       | blocked     |
 | 7   | Before | `ce feedback:publish`                  | roadmap     |
 | 8   | Before | `ce qr:generate`                       | blocked     |

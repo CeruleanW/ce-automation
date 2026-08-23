@@ -25,7 +25,7 @@ Per-operation split:
 | 2   | Before  | `ce registration:publish --id` | Passthrough → `registration:publish --id`    | implemented                     |
 | 3   | Before  | `ce website:update`            | Local orchestration                          | blocked (mechanism ADR pending) |
 | 4   | Before  | `ce email:create`              | Local orchestration                          | implemented                     |
-| 5   | Before  | `ce email:send`                | Local orchestration                          | roadmap                         |
+| 5   | Before  | `ce email:send`                | Local orchestration                          | implemented                     |
 | 6   | Before  | `ce promote:run`               | Local orchestration                          | blocked (channel ADR pending)   |
 | 7   | Before  | `ce feedback:publish`          | Local orchestration                          | roadmap                         |
 | 8   | Before  | `ce qr:generate`               | Local orchestration                          | blocked (generator ADR pending) |

@@ -37,3 +37,34 @@ export class BlockedOpError extends Error {
     this.adr = adr;
   }
 }
+
+/**
+ * Thrown by the email-send orchestrator (Op 5) when neither `--to` nor
+ * `CE_EMAIL_RECIPIENTS` resolves any address. Never silently sends to
+ * nobody, never silently sends to a hardcoded address. Per ADR-0005.
+ */
+export class MissingRecipientsError extends Error {
+  constructor() {
+    super(
+      "No email recipients: pass --to <addr1,addr2,...> or set CE_EMAIL_RECIPIENTS in .env",
+    );
+    this.name = "MissingRecipientsError";
+  }
+}
+
+/**
+ * Thrown by the email-send orchestrator (Op 5) when the course record has
+ * no `start-date`, so the send deadline cannot be computed. Per
+ * `docs/workflows.md` Op 5 timing rule.
+ */
+export class MissingStartDateError extends Error {
+  public readonly recordId: string;
+
+  constructor(recordId: string) {
+    super(
+      `Course ${recordId} has no start-date; cannot compute email send deadline`,
+    );
+    this.name = "MissingStartDateError";
+    this.recordId = recordId;
+  }
+}

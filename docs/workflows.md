@@ -23,7 +23,7 @@ For the per-command JSON shapes, see `docs/features.md`. For the relationship an
 | 2   | Before  | `ce registration:publish --id` | Passthrough → `registration:publish --id`    | implemented |
 | 3   | Before  | `ce website:update`            | Local orchestration                          | blocked     |
 | 4   | Before  | `ce email:create`              | Local orchestration                          | implemented |
-| 5   | Before  | `ce email:send`                | Local orchestration                          | roadmap     |
+| 5   | Before  | `ce email:send`                | Local orchestration                          | implemented |
 | 6   | Before  | `ce promote:run`               | Local orchestration                          | blocked     |
 | 7   | Before  | `ce feedback:publish`          | Local orchestration                          | roadmap     |
 | 8   | Before  | `ce qr:generate`               | Local orchestration                          | blocked     |
@@ -117,7 +117,7 @@ Before the email send deadline (Op 5).
 
 1. `ce email:create` orchestrator fetches the course via `airtable:fetch-record --id`.
 2. Renders an inline TS template literal with course-field substitution (title, description, target audience, schedule, time, location, teacher, registration form link, note). Description uses `short-description-for-news-or-poster` if non-blank, else `long-description`. Lines whose substituted value is blank are dropped.
-3. Returns the rendered email as JSON (`{ recordId, term, subject, body }`) for the CE admin to review or pipe to `ce email:send` (Op 5, not yet implemented).
+3. Returns the rendered email as JSON (`{ recordId, term, subject, body }`) for the CE admin to review or pipe to `ce email:send` (Op 5). The Op 5 orchestrator also re-uses the exported `renderEmailDraft` pure function directly rather than re-running the Op 4 fetch-then-render pipeline.
 
 No Obsidian dependency yet — the template is inline. No `supabase:ensure-current-term` side effect — the course's `term` field is read directly from the Airtable record.
 
@@ -131,12 +131,13 @@ implemented.
 
 Tuesday, two weeks before the course start day.
 
-### Steps (target)
+### Steps
 
-1. `ce email:send` orchestrator computes the send deadline from the course's start date using `lib/clock.ts`.
-2. If invoked before the deadline, logs the planned send time and exits (or schedules; mechanism TBD).
-3. If invoked on or after the deadline, calls `runApiIntegrator('gws:exec', ['gmail', 'messages', 'send', ...])` with the rendered email body from Op 4.
-4. gws Gmail wrapper composes RFC 2822 MIME via api-integrator's `features/gws/mail-message.ts` and sends via the gws CLI.
+1. `ce email:send` orchestrator fetches the course via `airtable:fetch-record --id` (single fetch — it needs `start-date` for the timing rule and the same fields Op 4 renders from) and computes the send deadline from `start-date` using `lib/clock.ts` `emailSendDeadline`.
+2. If invoked before the deadline and `--force` is not set, returns `{ recordId, sent: false, plannedSendAt }` without calling gws.
+3. If invoked on or after the deadline (or with `--force`), resolves recipients per ADR-0005 (`--to` flag → `CE_EMAIL_RECIPIENTS` env → `MissingRecipientsError`), re-renders the body via the Op 4 `renderEmailDraft` pure function, and calls `runApiIntegrator('gws:exec', ['gmail', '+send', '--to', addr, ..., '--subject', subject, '--body', body])`.
+4. api-integrator's `gws:exec` passthrough hands the args to the gws Gmail wrapper, which composes RFC 2822 MIME via `features/gws/mail-message.ts` and sends via the gws CLI.
+5. Returns `{ recordId, sent: true, sentAt, messageId }` (messageId from `result.data.id`). `CE_DRY_RUN=true` short-circuits the send and returns `{ recordId, sent: false, dryRun: true, recipients, subject, body, sendArgs }` instead.
 
 ### Timing rule
 
@@ -144,7 +145,7 @@ Send day = (course start day) − 14 days, then rolled forward to the next Tuesd
 
 ### Status
 
-roadmap.
+implemented.
 
 ## Op 6 — Promote
 
@@ -292,8 +293,8 @@ Ported from api-integrator `README.md` §Publishing Operations:
 1. Fetch course data from Airtable — **Op 1** (implemented)
 2. Publish registration form — **Op 2** (implemented)
 3. Update website with course info — **Op 3** (blocked)
-4. Create announcement email — **Op 4** (roadmap)
-5. Send announcement email (Tuesday +2 wks before start) — **Op 5** (roadmap)
+4. Create announcement email — **Op 4** (implemented)
+5. Send announcement email (Tuesday +2 wks before start) — **Op 5** (implemented)
 6. Promote (2 Sundays before start) — **Op 6** (blocked)
 7. Create feedback form from template — **Op 7** (roadmap)
 8. Generate QR code for feedback form — **Op 8** (blocked)

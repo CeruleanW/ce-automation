@@ -7,7 +7,7 @@ export interface EmailDraft {
   body: string;
 }
 
-interface CourseFields {
+export interface CourseFields {
   title?: string;
   term?: string;
   "short-description-for-news-or-poster"?: string;
@@ -74,6 +74,24 @@ function renderBody(fields: CourseFields): string {
     .trim();
 }
 
+/**
+ * Pure renderer: build an {@link EmailDraft} from already-fetched course
+ * fields. No I/O. Reused by the Op 5 email-send orchestrator so it can
+ * fetch the record once (it needs `start-date` for the timing rule too)
+ * rather than re-running the Op 4 fetch-then-render pipeline.
+ */
+export function renderEmailDraft(
+  recordId: string,
+  fields: CourseFields,
+): EmailDraft {
+  return {
+    recordId,
+    term: fields.term ?? "",
+    subject: `課程報名：${fields.title ?? ""}`,
+    body: renderBody(fields),
+  };
+}
+
 export async function createEmail(
   recordId: string,
   config: RunnerConfig,
@@ -87,13 +105,5 @@ export async function createEmail(
       `airtable:fetch-record did not return a record: ${JSON.stringify(recordRaw).slice(0, 200)}`,
     );
   }
-  const fields = recordRaw.fields;
-  const subject = `課程報名：${fields.title ?? ""}`;
-  const body = renderBody(fields);
-  return {
-    recordId,
-    term: fields.term ?? "",
-    subject,
-    body,
-  };
+  return renderEmailDraft(recordId, recordRaw.fields);
 }
