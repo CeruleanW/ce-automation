@@ -39,6 +39,16 @@ Without a client, `gws auth login` prints `401: No OAuth client configured.`
 
 ### Login (browser consent)
 
+The single-command way (pre-checks the OAuth client, runs the login, verifies):
+
+```bash
+pnpm ce auth:gws
+# already-authed → skips login; otherwise opens browser, then verifies
+# override scopes: pnpm ce auth:gws --scopes gmail
+```
+
+The raw gws way (equivalent, but without the pre-check / verify wrapper):
+
 ```bash
 gws auth login -s drive,gmail,sheets,forms
 ```
@@ -94,12 +104,13 @@ the JSON, not trust the exit code. Any Gmail call returning
 
 Two patterns:
 
-1. **Workstation (this repo's default).** Do the interactive login once, then
-   every `ce email:send` run executes the `checkGwsAuth` gate inline before
-   the real send — it fails fast with remediation hints when auth is missing
-   (see `src/lib/gws-auth.ts`). A standalone `pnpm check:gws` wrapper exists
-   for CI or wrapper scripts that want to verify auth before any Op 5 step.
-   Wire it into CI or a wrapper script before Op 5.
+1. **Workstation (this repo's default).** Run `pnpm ce auth:gws` once per
+   machine — it pre-checks the OAuth client, opens the browser for consent, and
+   verifies the resulting tokens. Then every `ce email:send` run executes the
+   `checkGwsAuth` gate inline before the real send — it fails fast with
+   remediation hints when auth is missing (see `src/lib/gws-auth.ts`). A
+   standalone `pnpm check:gws` wrapper exists for CI or wrapper scripts that
+   want to verify auth before any Op 5 step.
 2. **Headless / CI.** Complete `gws auth export` on a browser machine, store the
    resulting credentials JSON in your secret manager, and point
    `GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE` at it in the runner environment.

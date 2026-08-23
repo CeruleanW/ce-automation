@@ -19,9 +19,12 @@ Getting-started guide for the CE admin. Walks through prerequisites, env provisi
 Full reference including automation and troubleshooting: `docs/gws-authentication.md`.
 
 - Install: `npm install -g @googleworkspace/cli`
-- Authenticate (select services: drive, gmail, sheets, forms):
+- Provide an OAuth client (one of): run `gws auth setup` (needs `gcloud`), or save `client_secret.json` to `~/.config/gws/`, or set `GOOGLE_WORKSPACE_CLI_CLIENT_ID` + `GOOGLE_WORKSPACE_CLI_CLIENT_SECRET` env vars.
+- Authenticate end-to-end (pre-checks the client, opens browser for consent, verifies):
   ```bash
-  gws auth login -s drive,gmail,sheets,forms
+  pnpm ce auth:gws
+  # already-authed → skips login; otherwise opens browser, then verifies
+  # override scopes: pnpm ce auth:gws --scopes gmail
   ```
   This opens a browser for OAuth consent — **run it on a machine with a browser**. Headless environments (servers, CI, remote shells without X forwarding) cannot complete the OAuth flow. There is no device-code or service-account fallback for personal Gmail accounts: service accounts require Google Workspace domain-wide delegation and do not work with `@gmail.com` senders. If gws is already authenticated on another machine, copying `~/.config/gws/` (client_secret.json + credentials) to the target machine works, but the OAuth tokens may need refresh on first use.
 - Verify before first send: `gws auth status` should report `"auth_method": "oauth"` and `credential_source` other than `"none"`.

@@ -3,6 +3,7 @@ import { commands as registrationCommands } from "./commands/registration.ts";
 import { commands as termCommands } from "./commands/term.ts";
 import { commands as primitivesCommands } from "./commands/primitives.ts";
 import { commands as emailCommands } from "./commands/email.ts";
+import { commands as authCommands } from "./commands/auth.ts";
 import type { CommandMap } from "./lib/command.ts";
 
 const commands: CommandMap = {
@@ -11,6 +12,7 @@ const commands: CommandMap = {
   ...termCommands,
   ...primitivesCommands,
   ...emailCommands,
+  ...authCommands,
 };
 
 function printHelp(): void {

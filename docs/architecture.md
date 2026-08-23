@@ -54,6 +54,7 @@ src/
 │   ├── registration.ts         ce registration:*
 │   ├── term.ts                 ce term:* (Supabase passthrough)
 │   ├── email.ts                ce email:create + email:send (Op 4 + Op 5)
+│   ├── auth.ts                 ce auth:gws (one-time gws login + verify)
 │   └── primitives.ts          ce drive:* / forms:* / gws:* / obsidian:* passthroughs
 ├── orchestrators/              local multi-step logic for ops #3-#8 (email-create + email-send implemented; rest roadmap/blocked)
 │   ├── website-update.ts      op 3 — blocked pending mechanism ADR
@@ -67,7 +68,7 @@ src/
 │   └── feedback-stop.ts       after-course
 └── lib/
     ├── shell.ts                runApiIntegrator(cmd, args) — spawn pnpm, parse JSON; RunnerConfig interface
-    ├── gws-auth.ts             checkGwsAuth() — pre-flight gws auth gate (spawns `gws auth status`, parses JSON); GwsAuthError + AuthStatus
+    ├── gws-auth.ts             checkGwsAuth() gate + readGwsAuthStatus() + hasGwsClient() (spawn `gws auth status`, parse JSON); GwsAuthError, GwsClientError, AuthStatus
     ├── clock.ts                pure date math: emailSendDeadline(), promotionDay() (UTC)
     ├── errors.ts               ApiIntegratorError, ApiIntegratorParseError, BlockedOpError, MissingRecipientsError, MissingStartDateError
     └── command.ts              Command / CommandMap types
