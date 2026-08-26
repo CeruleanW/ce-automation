@@ -99,7 +99,11 @@ export function readGwsAuthStatus(): Promise<AuthStatus> {
  */
 export async function checkGwsAuth(): Promise<AuthStatus> {
   const status = await readGwsAuthStatus();
-  if (status.storage === "none" || status.auth_method !== "oauth") {
+  if (
+    status.storage === "none" ||
+    status.auth_method === "none" ||
+    status.auth_method === undefined
+  ) {
     throw new GwsAuthError(
       `gws auth status: auth_method=${status.auth_method ?? "?"} storage=${status.storage ?? "?"} credential_source=${status.credential_source ?? "?"}`,
     );

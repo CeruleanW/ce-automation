@@ -27,7 +27,7 @@ Full reference including automation and troubleshooting: `docs/gws-authenticatio
   # override scopes: pnpm ce auth:gws --scopes gmail
   ```
   This opens a browser for OAuth consent — **run it on a machine with a browser**. Headless environments (servers, CI, remote shells without X forwarding) cannot complete the OAuth flow. There is no device-code or service-account fallback for personal Gmail accounts: service accounts require Google Workspace domain-wide delegation and do not work with `@gmail.com` senders. If gws is already authenticated on another machine, copying `~/.config/gws/` (client_secret.json + credentials) to the target machine works, but the OAuth tokens may need refresh on first use.
-- Verify before first send: `gws auth status` should report `"auth_method": "oauth"` and `credential_source` other than `"none"`.
+- Verify before first send: `gws auth status` should report `"auth_method": "oauth2"` and `credential_source` other than `"none"`.
 - Used by ce-automation for Op 5 (email send) and any `ce gws:exec` passthrough.
 
 ### 4. Obsidian CLI
@@ -109,7 +109,7 @@ Sending an announcement email is a real Gmail send — it cannot be undone. Befo
 ```bash
 # 1. Verify gws is authenticated (run on a machine with gws auth completed)
 gws auth status
-# Expect: auth_method=oauth, credential_source != none
+# Expect: auth_method=oauth2, credential_source != none
 
 # 2. Dry-run: render the email + show send args without calling gws
 CE_DRY_RUN=true pnpm ce email:send --id <recordId> --to <addr@example.com> --force

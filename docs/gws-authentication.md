@@ -85,7 +85,7 @@ gws auth status
 gws gmail users messages list --params '{"userId":"me","q":"is:unread","maxResults":1}'
 ```
 
-Healthy state reports `"auth_method": "oauth"` and a `credential_source` other
+Healthy state reports `"auth_method": "oauth2"` and a `credential_source` other
 than `"none"`. Unauthenticated state reports `"storage": "none"` with
 `*_exists: false` for all files **and still exits 0** — automation must parse
 the JSON, not trust the exit code. Any Gmail call returning

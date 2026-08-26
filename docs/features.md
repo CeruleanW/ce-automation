@@ -130,7 +130,7 @@ One-time-per-machine setup helpers. Not lifecycle ops — these prepare a depend
 ### `ce auth:gws [--scopes <csv>]`
 
 - **Args**: `--scopes <drive,gmail,sheets,forms>` (optional, defaults to `drive,gmail,sheets,forms`)
-- **Delegates to (locally composed)**: `lib/gws-auth.ts` `readGwsAuthStatus` pre-checks the OAuth client (file on disk, env vars, or prior `gws auth setup`); if missing, throws `GwsClientError` with setup guidance. If an OAuth client exists and gws is not yet authenticated, spawns `gws auth login -s <scopes>` with inherited stdio (opens the host browser for OAuth consent — run on a machine with a browser). After login (or skipped if already authed), `checkGwsAuth` verifies `auth_method=oauth` + `storage!=none`.
+- **Delegates to (locally composed)**: `lib/gws-auth.ts` `readGwsAuthStatus` pre-checks the OAuth client (file on disk, env vars, or prior `gws auth setup`); if missing, throws `GwsClientError` with setup guidance. If an OAuth client exists and gws is not yet authenticated, spawns `gws auth login -s <scopes>` with inherited stdio (opens the host browser for OAuth consent — run on a machine with a browser). After login (or skipped if already authed), `checkGwsAuth` verifies `auth_method` is set and non-`none` (real value: `oauth2`) + `storage!=none`.
 - **Returns**: `{ authenticated: true, authMethod, credentialSource, scopes, loginSkipped }`.
 - **Errors raised**: `GwsClientError` (no OAuth client — lists the three ways to provide one), `GwsAuthError` (post-login verification failed), `Error` (login exited non-zero).
 - **Interactive**: yes — the `gws auth login` step opens a browser and blocks until consent completes. No browser-less fallback for personal Gmail (see `docs/gws-authentication.md`).

@@ -91,6 +91,20 @@ describe("checkGwsAuth", () => {
     expect(status.credential_source).toBe("file");
   });
 
+  it("resolves with status when auth_method=oauth2 (real gws 0.22.x value)", async () => {
+    spawnMock.mockReturnValue(
+      makeFakeChild(
+        JSON.stringify({
+          auth_method: "oauth2",
+          storage: "encrypted",
+          credential_source: "client_secret.json",
+        }),
+      ),
+    );
+    const status = await checkGwsAuth();
+    expect(status.auth_method).toBe("oauth2");
+  });
+
   it("rejects with GwsAuthError when auth_method=none", async () => {
     spawnMock.mockReturnValue(
       makeFakeChild(JSON.stringify({ auth_method: "none", storage: "none" })),
@@ -103,6 +117,13 @@ describe("checkGwsAuth", () => {
   it("rejects when storage=none even if auth_method looks set", async () => {
     spawnMock.mockReturnValue(
       makeFakeChild(JSON.stringify({ auth_method: "oauth", storage: "none" })),
+    );
+    await expect(checkGwsAuth()).rejects.toThrow(/gws is not authenticated/);
+  });
+
+  it("rejects when auth_method is missing", async () => {
+    spawnMock.mockReturnValue(
+      makeFakeChild(JSON.stringify({ storage: "encrypted" })),
     );
     await expect(checkGwsAuth()).rejects.toThrow(/gws is not authenticated/);
   });
