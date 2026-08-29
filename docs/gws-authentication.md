@@ -8,7 +8,7 @@ one-time setup step in `docs/setup.md` section 3 into a full reference.
 
 ```
 pnpm ce email:send              <- ce-automation (this repo)
-  pnpm --dir $API_INTEGRATOR_DIR cli gws:exec ...   <- api-integrator
+  pnpm cli gws:exec ...   (cwd=$API_INTEGRATOR_DIR)  <- api-integrator
     execFile("gws", ["gmail", "+send", ...])          <- gws binary (global npm install)
       Google OAuth2                                   <- stored credentials in ~/.config/gws/
 ```
@@ -125,6 +125,7 @@ Exact errors observed in practice, top layer to bottom:
 | Symptom                                                                                | Layer          | Cause / fix                                                                                                                            |
 | -------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `airtable:fetch-record exited 1: …For help, run: pnpm help run`                        | ce-automation  | `API_INTEGRATOR_DIR` points at a missing repo or one without a `cli` script; the real error is above the pnpm footer in the same block |
+| `spawn … EACCES` / `ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL` on the integrator dir path     | ce-automation  | Old `pnpm --dir <path>` invocation on pnpm 11 (it execs the dir path itself); fixed by the cwd-based spawn — update ce-automation      |
 | `You installed esbuild for another platform ... @esbuild/linux-arm64 vs darwin-arm64`  | api-integrator | `node_modules` copied from another OS; run `pnpm install --force` there                                                                |
 | `The "args" argument must be of type object. Received type string ('gmail +send ...')` | api-integrator | Its cli.ts joined args into one string before `execFile`; pass the array                                                               |
 | `gws command failed (exit 1): <composed body echoed>`                                  | api-integrator | Real error is above/below the echoed body in the full stderr block; run the same `gws ...` call directly                               |
@@ -138,6 +139,6 @@ Debug recipe: reproduce at the bottom of the chain first —
 ```bash
 gws auth status
 gws gmail +send --to <addr> --subject t --body b   # direct, no wrappers
-pnpm --dir "$API_INTEGRATOR_DIR" cli gws:exec gmail +send --to <addr> --subject t --body b
+cd "$API_INTEGRATOR_DIR" && pnpm cli gws:exec gmail +send --to <addr> --subject t --body b
 pnpm ce email:send --id <recordId> --to <addr> --force
 ```

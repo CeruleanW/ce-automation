@@ -166,7 +166,7 @@ The Airtable record has no `start-date` field, so `emailSendDeadline` cannot be 
 A passthrough command failed inside api-integrator. The error message is api-integrator's own. Re-run the same command directly against api-integrator to debug:
 
 ```bash
-pnpm --dir "$API_INTEGRATOR_DIR" cli <cmd> [args...]
+cd "$API_INTEGRATOR_DIR" && pnpm cli <cmd> [args...]
 ```
 
 If that succeeds but `ce <cmd>` fails, the issue is in ce-automation's arg forwarding — check `docs/features.md` for the expected arg shape.

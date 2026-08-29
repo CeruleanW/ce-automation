@@ -34,7 +34,7 @@ See:
                              │ runApiIntegrator(cmd, args)
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  api-integrator  pnpm --dir $API_INTEGRATOR_DIR cli <cmd>   │
+│  api-integrator  pnpm cli <cmd>   (cwd=$API_INTEGRATOR_DIR)   │
 │  src/cli.ts  →  features/*  →  external services            │
 │  (Airtable, Drive, Forms, Supabase, gws, Obsidian, Gemini)  │
 └─────────────────────────────────────────────────────────────┘

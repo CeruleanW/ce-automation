@@ -72,15 +72,8 @@ describe("runApiIntegrator", () => {
     expect(result).toEqual({ id: "rec123", fields: {} });
     expect(spawnMock).toHaveBeenCalledWith(
       "pnpm",
-      [
-        "--dir",
-        "/fake/integrator",
-        "cli",
-        "airtable:fetch-record",
-        "--id",
-        "rec123",
-      ],
-      { stdio: ["ignore", "pipe", "pipe"] },
+      ["cli", "airtable:fetch-record", "--id", "rec123"],
+      { cwd: "/fake/integrator", stdio: ["ignore", "pipe", "pipe"] },
     );
   });
 
@@ -196,6 +189,6 @@ describe("runApiIntegrator", () => {
   it("uses default integrator dir when env not set (covered by mock)", async () => {
     spawnMock.mockReturnValue(makeFakeChild({ stdout: ["{}"], exitCode: 0 }));
     await runApiIntegrator("term:ensure");
-    expect(spawnMock.mock.calls[0]?.[1]?.[1]).toBe("/fake/integrator");
+    expect(spawnMock.mock.calls[0]?.[2]?.cwd).toBe("/fake/integrator");
   });
 });

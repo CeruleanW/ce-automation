@@ -8,26 +8,26 @@
 
 ADR-0001 chose the thin-CLI-shell relationship. Two invocation mechanisms were considered for how ce-automation actually calls api-integrator at runtime:
 
-1. **Shell out to `pnpm --dir <api-integrator-path> cli <cmd> [args...]` and parse JSON stdout.**
+1. **Shell out to `pnpm cli <cmd> [args...]` with cwd set to the api-integrator path, and parse JSON stdout.**
 2. **Programmatic source import via tsx** (workspace dep + `import { ... } from '../../api-integrator/src/...ts'`).
 3. **Long-running HTTP/IPC service** wrapping api-integrator.
 
 ## Decision
 
-Adopt Option 1. ce-automation spawns `pnpm --dir "$API_INTEGRATOR_DIR" cli <cmd> [args...]` as a child process, captures stdout, and parses the trailing `JSON.stringify(result, null, 2)` block. The single boundary lives in `src/lib/shell.ts`:
+Adopt Option 1. ce-automation spawns `pnpm cli <cmd> [args...]` as a child process with `cwd` set to `$API_INTEGRATOR_DIR` (equivalent to `cd "$API_INTEGRATOR_DIR" && pnpm cli ...`), captures stdout, and parses the trailing `JSON.stringify(result, null, 2)` block. The single boundary lives in `src/lib/shell.ts`:
 
 ```ts
 export async function runApiIntegrator(
   cmd: string,
   args: string[] = [],
 ): Promise<unknown> {
-  // spawn pnpm --dir <API_INTEGRATOR_DIR> cli <cmd> <args...>
-  // on non-zero exit: throw ApiIntegratorError(cmd, stderr, exitCode)
+  // spawn pnpm cli <cmd> <args...> with cwd=API_INTEGRATOR_DIR
+  // on non-zero exit: throw ApiIntegratorError(cmd, stderr, stdout, exitCode)
   // on success: parse stdout JSON, return parsed value
 }
 ```
 
-`API_INTEGRATOR_DIR` defaults to `/ai-projects/api-integrator` and is overridable via env for non-default installs.
+`API_INTEGRATOR_DIR` defaults to `/ai-projects/api-integrator` and is overridable via env for non-default installs. (Originally implemented as `pnpm --dir <path> cli ...`; switched to the cwd form after pnpm 11 dropped the `--dir` value-parsing, causing it to exec the directory path itself.)
 
 ## Error model
 
