@@ -17,6 +17,7 @@
  */
 import type { RunnerConfig } from "../lib/shell.ts";
 import { emailSendDeadline } from "../lib/clock.ts";
+import { encodeRFC2047Subject } from "../lib/rfc2047.ts";
 import { getEmailRecipients, parseRecipientList } from "../config.ts";
 import {
   MissingRecipientsError,
@@ -81,7 +82,9 @@ function buildSendArgs(recipients: string[], draft: EmailDraft): string[] {
     "+send",
     ...toArgs,
     "--subject",
-    draft.subject,
+    // RFC 2047: gws mangles raw non-ASCII subjects (Latin-1 double-encoding)
+    // and RFC 5322 requires ASCII headers anyway. See lib/rfc2047.ts.
+    encodeRFC2047Subject(draft.subject),
     "--body",
     draft.body,
   ];

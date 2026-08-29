@@ -135,7 +135,7 @@ Tuesday, two weeks before the course start day.
 
 1. `ce email:send` orchestrator fetches the course via `airtable:fetch-record --id` (single fetch — it needs `start-date` for the timing rule and the same fields Op 4 renders from) and computes the send deadline from `start-date` using `lib/clock.ts` `emailSendDeadline`.
 2. If invoked before the deadline and `--force` is not set, returns `{ recordId, sent: false, plannedSendAt }` without calling gws.
-3. If invoked on or after the deadline (or with `--force`), resolves recipients per ADR-0005 (`--to` flag → `CE_EMAIL_RECIPIENTS` env → `MissingRecipientsError`), re-renders the body via the Op 4 `renderEmailDraft` pure function, and calls `runApiIntegrator('gws:exec', ['gmail', '+send', '--to', addr, ..., '--subject', subject, '--body', body])`.
+3. If invoked on or after the deadline (or with `--force`), resolves recipients per ADR-0005 (`--to` flag → `CE_EMAIL_RECIPIENTS` env → `MissingRecipientsError`), re-renders the body via the Op 4 `renderEmailDraft` pure function, and calls `runApiIntegrator('gws:exec', ['gmail', '+send', '--to', addr, ..., '--subject', subject, '--body', body])`. The subject is RFC 2047 B-encoded first (`lib/rfc2047.ts`) — gws mangles raw non-ASCII subjects (Latin-1 double-encoding mojibake) and RFC 5322 requires ASCII headers anyway.
 4. api-integrator's `gws:exec` passthrough hands the args to the gws Gmail wrapper, which composes RFC 2822 MIME via `features/gws/mail-message.ts` and sends via the gws CLI.
 5. Returns `{ recordId, sent: true, sentAt, messageId }` (messageId from `result.data.id`). `CE_DRY_RUN=true` short-circuits the send and returns `{ recordId, sent: false, dryRun: true, recipients, subject, body, sendArgs }` instead.
 

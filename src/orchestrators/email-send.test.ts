@@ -229,7 +229,8 @@ describe("sendEmail", () => {
         "--to",
         "admin@church.example",
         "--subject",
-        "課程報名：Test Course",
+        // RFC 2047 B-encoding of "課程報名：Test Course" (see lib/rfc2047.ts)
+        "=?UTF-8?B?6Kqy56iL5aCx5ZCN77yaVGVzdCBDb3Vyc2U=?=",
         "--body",
         expect.stringContaining("Test Course"),
       ]);
@@ -290,7 +291,8 @@ describe("sendEmail", () => {
         "--to",
         "admin@church.example",
         "--subject",
-        "課程報名：Test Course",
+        // RFC 2047 B-encoding of "課程報名：Test Course" (see lib/rfc2047.ts)
+        "=?UTF-8?B?6Kqy56iL5aCx5ZCN77yaVGVzdCBDb3Vyc2U=?=",
         "--body",
         expect.stringContaining("Test Course"),
       ]);

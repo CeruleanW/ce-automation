@@ -69,6 +69,7 @@ src/
 └── lib/
     ├── shell.ts                runApiIntegrator(cmd, args) — spawn pnpm, parse JSON; RunnerConfig interface
     ├── gws-auth.ts             checkGwsAuth() gate + readGwsAuthStatus() + hasGwsClient() (spawn `gws auth status`, parse JSON); GwsAuthError, GwsClientError, AuthStatus
+    ├── rfc2047.ts              encodeRFC2047Subject() — RFC 2047 B-encoded subject for non-ASCII Op 5 subjects (gws Latin-1 mangling workaround)
     ├── clock.ts                pure date math: emailSendDeadline(), promotionDay() (UTC)
     ├── errors.ts               ApiIntegratorError, ApiIntegratorParseError, BlockedOpError, MissingRecipientsError, MissingStartDateError
     └── command.ts              Command / CommandMap types
