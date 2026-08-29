@@ -72,7 +72,7 @@ describe("runApiIntegrator", () => {
     expect(result).toEqual({ id: "rec123", fields: {} });
     expect(spawnMock).toHaveBeenCalledWith(
       "pnpm",
-      ["cli", "airtable:fetch-record", "--id", "rec123"],
+      ["run", "cli", "airtable:fetch-record", "--id", "rec123"],
       { cwd: "/fake/integrator", stdio: ["ignore", "pipe", "pipe"] },
     );
   });

@@ -21,12 +21,14 @@ export async function runApiIntegrator(
   args: string[] = [],
 ): Promise<unknown> {
   const integratorDir = getIntegratorDir();
-  // Run pnpm with cwd set to the integrator dir instead of passing
-  // `pnpm --dir <path> cli ...` — pnpm 11 dropped/changed the `--dir` flag's
-  // value handling, causing it to exec the directory path itself (EACCES).
-  // The cwd form (`cd $API_INTEGRATOR_DIR && pnpm cli ...`) works on every
-  // pnpm version.
-  const child = spawn("pnpm", ["cli", cmd, ...args], {
+  // Run `pnpm run cli` with cwd set to the integrator dir (equivalent to
+  // `cd $API_INTEGRATOR_DIR && pnpm run cli ...`). Explicit `run` avoids
+  // pnpm's implicit command/exec fallback: with a bare `pnpm cli`, a
+  // checkout that predates api-integrator's `cli` script fails with the
+  // cryptic ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL instead of "Missing script".
+  // (The earlier `pnpm --dir <path>` form also broke on pnpm 11, which
+  // exec'd the directory path itself — EACCES.)
+  const child = spawn("pnpm", ["run", "cli", cmd, ...args], {
     cwd: integratorDir,
     stdio: ["ignore", "pipe", "pipe"],
   });
