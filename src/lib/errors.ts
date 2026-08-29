@@ -3,15 +3,25 @@ export class ApiIntegratorError extends Error {
   public readonly args: string[];
   public readonly exitCode: number;
   public readonly stderr: string;
+  public readonly stdout: string;
 
-  constructor(cmd: string, args: string[], exitCode: number, stderr: string) {
-    const body = stderr.length > 2000 ? `…${stderr.slice(-2000)}` : stderr;
-    super(`${cmd} exited ${exitCode}:\n${body}`);
+  constructor(
+    cmd: string,
+    args: string[],
+    exitCode: number,
+    stderr: string,
+    stdout = "",
+  ) {
+    const parts = [stderr.trim(), stdout.trim()].filter(Boolean);
+    const body = parts.join(" | ") || "(no output)";
+    const trimmed = body.length > 2000 ? `…${body.slice(-2000)}` : body;
+    super(`${cmd} exited ${exitCode}:\n${trimmed}`);
     this.name = "ApiIntegratorError";
     this.cmd = cmd;
     this.args = args;
     this.exitCode = exitCode;
     this.stderr = stderr;
+    this.stdout = stdout;
   }
 }
 

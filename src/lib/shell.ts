@@ -46,7 +46,7 @@ export async function runApiIntegrator(
   });
 
   if (exitCode !== 0) {
-    throw new ApiIntegratorError(cmd, args, exitCode ?? -1, stderr.trim());
+    throw new ApiIntegratorError(cmd, args, exitCode ?? -1, stderr, stdout);
   }
 
   return parseStdout(cmd, stdout);

@@ -141,7 +141,25 @@ describe("runApiIntegrator", () => {
       cmd: "registration:publish",
       exitCode: 1,
       stderr: "command failed\nsecond line",
+      stdout: "",
     });
+  });
+
+  it("surfaces stdout in ApiIntegratorError when stderr is empty", async () => {
+    spawnMock.mockReturnValue(
+      makeFakeChild({
+        stdout: ["esbuild error: version mismatch\n"],
+        stderr: [],
+        exitCode: 1,
+      }),
+    );
+    try {
+      await runApiIntegrator("airtable:fetch-record", ["--id", "rec1"]);
+    } catch (e) {
+      expect((e as { name: string }).name).toBe("ApiIntegratorError");
+      expect((e as { stdout: string }).stdout).toContain("esbuild error");
+      expect((e as { message: string }).message).toContain("esbuild error");
+    }
   });
 
   it("throws ApiIntegratorError on spawn error", async () => {
