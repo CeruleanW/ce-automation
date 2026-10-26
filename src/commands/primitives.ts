@@ -1,5 +1,9 @@
 import { parseArgs } from "node:util";
 import type { CommandMap } from "../lib/command.ts";
+import {
+  currentTermFolderName,
+  nextTermFolderName,
+} from "../lib/clock.ts";
 import { runApiIntegrator } from "../lib/shell.ts";
 
 export const commands = {
@@ -15,6 +19,30 @@ export const commands = {
       const name = values["name"];
       if (!name) throw new Error("Missing required --name <folderName>");
       return runApiIntegrator("drive:find-folder", ["--name", name]);
+    },
+  },
+  "drive:current-term-folder": {
+    description: "Find the Google Drive folder for the current term",
+    source: "Google Drive (current term folder search)",
+    run: async () => {
+      const name = currentTermFolderName();
+      const result = await runApiIntegrator("drive:find-folder", [
+        "--name",
+        name,
+      ]);
+      return { name, result };
+    },
+  },
+  "drive:next-term-folder": {
+    description: "Find the Google Drive folder for the next term",
+    source: "Google Drive (next term folder search)",
+    run: async () => {
+      const name = nextTermFolderName();
+      const result = await runApiIntegrator("drive:find-folder", [
+        "--name",
+        name,
+      ]);
+      return { name, result };
     },
   },
   "drive:duplicate": {

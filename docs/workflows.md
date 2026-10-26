@@ -31,7 +31,11 @@ For the per-command JSON shapes, see `docs/features.md`. For the relationship an
 | —   | After   | `ce feedback:collect`          | Local orchestration                          | roadmap     |
 | —   | After   | `ce feedback:stop`             | Local orchestration                          | roadmap     |
 | —   | Support | `ce term:ensure`               | Passthrough → `supabase:ensure-current-term` | implemented |
+| —   | Support | `ce supabase:course:*`         | Supabase course table operations             | implemented |
+| —   | Support | `ce supabase:news:*`           | Supabase news table operations               | implemented |
 | —   | Support | `ce drive:find-folder --name`  | Passthrough → `drive:find-folder`            | implemented |
+| —   | Support | `ce drive:current-term-folder` | Local name calculation → `drive:find-folder` | implemented |
+| —   | Support | `ce drive:next-term-folder`    | Local name calculation → `drive:find-folder` | implemented |
 | —   | Support | `ce drive:duplicate --file-id` | Passthrough → `drive:duplicate`              | implemented |
 | —   | Support | `ce forms:auth`                | Passthrough → `forms:auth`                   | implemented |
 | —   | Support | `ce forms:status`              | Passthrough → `forms:status`                 | implemented |
@@ -254,11 +258,29 @@ roadmap. Same dependency as `ce registration:stop`.
 
 Based on current month, the system prepares for the **next** term. Implemented in api-integrator's `features/supabase/term.ts`; ce-automation relies on `ce term:ensure` which shells out to `supabase:ensure-current-term`.
 
+### Google Drive term-folder naming
+
+Registration publishing resolves (and creates if needed) the folder for the **next** term under `CE_ROOT_DIRECTORY_ID`. Folder names use this exact format:
+
+```text
+YYYY MM-MM (Term)
+```
+
+For example: `2026 04-06 (Spring)`, `2026 07-08 (Summer)`, `2026 09-11 (Fall)`, and `2027 01-03 (Winter)`. The year and month range are part of the folder name; use the next-term row below to determine the expected name. To look it up manually, run `pnpm ce drive:find-folder --name "YYYY MM-MM (Term)"`. This searches by name; it does not calculate the next term or create a missing folder. The naming and automatic resolution for registration publishing are implemented in api-integrator's `domains/registration.ts`.
+
+To find the folder for the term containing today's date without knowing its name, run `pnpm ce drive:current-term-folder`. It calculates the current term's folder name and searches Drive; the output includes the name searched and the Drive search result. December is still Fall, whose folder name uses the `09-11` range.
+
+To find the upcoming term's folder, run `pnpm ce drive:next-term-folder`. This follows the next-term calendar below, calculates the expected name, and searches Drive. Like the current-term command, it does not create a folder if the search returns no matches.
+
+### Sync an Airtable course to Supabase
+
+Run `pnpm ce supabase:course:sync-airtable --id <airtableRecordId>` for a course marked ready in Airtable. The command fetches the Airtable record, ensures its matching Supabase term row exists, and inserts or updates the Supabase course. It maps the Airtable title and full description (falling back to the short/news description). Because `public.course` has no Airtable record-id column, matching is by term and exact title; duplicate matches stop with an error rather than choosing arbitrarily. This command does not modify the Airtable record.
+
 | Current Month      | Next Term          | Folder Month Range |
 | ------------------ | ------------------ | ------------------ |
 | Jan – Mar (Winter) | Spring             | 04 – 06            |
 | Apr – Jun (Spring) | Summer             | 07 – 08            |
-| Jul – Aug (Summer) | Fall               | 09 – 12            |
+| Jul – Aug (Summer) | Fall               | 09 – 11            |
 | Sep – Dec (Fall)   | Winter (next year) | 01 – 03            |
 
 ce-automation relies on `ce term:ensure` for term persistence; `lib/clock.ts` only computes email/promote deadlines from `courseStart` (course-start − 14d rolled forward to Tuesday/Sunday). The source of truth for the term table itself stays api-integrator.

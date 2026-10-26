@@ -1,7 +1,38 @@
 import { describe, it, expect } from "vitest";
-import { emailSendDeadline, promotionDay } from "./clock.ts";
+import {
+  currentTermFolderName,
+  emailSendDeadline,
+  nextTermFolderName,
+  promotionDay,
+} from "./clock.ts";
 
 describe("clock", () => {
+  describe("currentTermFolderName", () => {
+    const cases: Array<[Date, string]> = [
+      [new Date(2026, 0, 15), "2026 01-03 (Winter)"],
+      [new Date(2026, 3, 15), "2026 04-06 (Spring)"],
+      [new Date(2026, 6, 15), "2026 07-08 (Summer)"],
+      [new Date(2026, 8, 15), "2026 09-11 (Fall)"],
+      [new Date(2026, 11, 15), "2026 09-11 (Fall)"],
+    ];
+    it.each(cases)("maps %s to %s", (date, expected) => {
+      expect(currentTermFolderName(date)).toBe(expected);
+    });
+  });
+
+  describe("nextTermFolderName", () => {
+    const cases: Array<[Date, string]> = [
+      [new Date(2026, 0, 15), "2026 04-06 (Spring)"],
+      [new Date(2026, 3, 15), "2026 07-08 (Summer)"],
+      [new Date(2026, 6, 15), "2026 09-11 (Fall)"],
+      [new Date(2026, 8, 15), "2027 01-03 (Winter)"],
+      [new Date(2026, 11, 15), "2027 01-03 (Winter)"],
+    ];
+    it.each(cases)("maps %s to %s", (date, expected) => {
+      expect(nextTermFolderName(date)).toBe(expected);
+    });
+  });
+
   describe("emailSendDeadline", () => {
     it("returns Tuesday on or after courseStart - 14d", () => {
       // Course start 2026-09-20 (Sunday). base = 2026-09-06 (Sunday). next Tuesday = 2026-09-08.
