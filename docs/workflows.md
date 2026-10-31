@@ -276,6 +276,16 @@ To find the upcoming term's folder, run `pnpm ce drive:next-term-folder`. This f
 
 Run `pnpm ce supabase:course:sync-airtable --id <airtableRecordId>` for a course marked ready in Airtable. The command fetches the Airtable record, ensures its matching Supabase term row exists, and inserts or updates the Supabase course. It maps the Airtable title and full description (falling back to the short/news description). Because `public.course` has no Airtable record-id column, matching is by term and exact title; duplicate matches stop with an error rather than choosing arbitrarily. This command does not modify the Airtable record.
 
+#### Remaining gaps
+
+Implementation plan: [`docs/plan-airtable-supabase-course-sync.md`](plan-airtable-supabase-course-sync.md).
+
+- **No automatic discovery or trigger:** an operator must supply each Airtable record ID. There is no batch sync, scheduled job, or trigger for newly ready courses.
+- **No next-term validation:** the sync requires the Airtable ready flag and uses the record's year and season, but does not verify that they identify the upcoming term.
+- **No durable Airtable-to-Supabase identity:** `public.course` has no Airtable record ID column. Re-sync matching uses `(term_id, title)`, so a title change can create a second row; multiple same-title matches fail safely. Add a source-record ID or another stable unique key for reliable updates.
+- **Term uniqueness is not guaranteed by the supplied schema:** the sync looks up a term by name, then inserts it if absent. The schema reference does not declare `name` unique, so concurrent syncs could create duplicate term rows. Add/confirm a unique constraint before running concurrent or batch syncs.
+- **No live integration test:** unit tests cover the sync logic with mocked Airtable and Supabase operations; the full flow has not been validated against live services.
+
 | Current Month      | Next Term          | Folder Month Range |
 | ------------------ | ------------------ | ------------------ |
 | Jan – Mar (Winter) | Spring             | 04 – 06            |
