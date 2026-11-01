@@ -111,6 +111,35 @@ describe("cli main", () => {
     expect(runApiIntegratorMock).not.toHaveBeenCalled();
   });
 
+  it("forwards the record ID for registration:publish and prints the result", async () => {
+    const result = {
+      formId: "form123",
+      formLink: "https://forms.google.com/form123",
+    };
+    runApiIntegratorMock.mockResolvedValue(result);
+
+    const code = await main(["registration:publish", "--id", "rec123"]);
+
+    expect(code).toBe(0);
+    expect(runApiIntegratorMock).toHaveBeenCalledWith("registration:publish", [
+      "--id",
+      "rec123",
+    ]);
+    expect(logSpy).toHaveBeenNthCalledWith(
+      1,
+      "Source: Airtable + Google Drive + Google Forms (registration publish, single)",
+    );
+    expect(logSpy).toHaveBeenNthCalledWith(2, JSON.stringify(result, null, 2));
+  });
+
+  it("returns 1 when required --id is missing for registration:publish", async () => {
+    const code = await main(["registration:publish"]);
+
+    expect(code).toBe(1);
+    expect(errSpy).toHaveBeenCalledWith("Missing required --id <recordId>");
+    expect(runApiIntegratorMock).not.toHaveBeenCalled();
+  });
+
   it("returns 1 when gws:exec has no args", async () => {
     const code = await main(["gws:exec"]);
     expect(code).toBe(1);
@@ -122,5 +151,55 @@ describe("cli main", () => {
     const code = await main(["registration:publish-all"]);
     expect(code).toBe(0);
     expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it("finds the current-term folder using the calculated folder name", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 3, 15));
+    runApiIntegratorMock.mockResolvedValue({ id: "folder123" });
+
+    try {
+      const code = await main(["drive:current-term-folder"]);
+
+      expect(code).toBe(0);
+      expect(runApiIntegratorMock).toHaveBeenCalledWith("drive:find-folder", [
+        "--name",
+        "2026 04-06 (Spring)",
+      ]);
+      expect(logSpy).toHaveBeenCalledWith(
+        JSON.stringify(
+          { name: "2026 04-06 (Spring)", result: { id: "folder123" } },
+          null,
+          2,
+        ),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("finds the next-term folder using the calculated folder name", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 15));
+    runApiIntegratorMock.mockResolvedValue({ id: "folder456" });
+
+    try {
+      const code = await main(["drive:next-term-folder"]);
+
+      expect(code).toBe(0);
+      expect(runApiIntegratorMock).toHaveBeenCalledWith("drive:find-folder", [
+        "--name",
+        "2027 01-03 (Winter)",
+      ]);
+      expect(logSpy).toHaveBeenCalledWith(
+        JSON.stringify(
+          { name: "2027 01-03 (Winter)", result: { id: "folder456" } },
+          null,
+          2,
+        ),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
