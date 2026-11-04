@@ -1,6 +1,6 @@
 # Features
 
-This document describes ce-automation's public surface: the `ce` command groups, their signatures, what each delegates to, and the expected JSON shape returned.
+This document describes ce-automation's public surface: the `ce` command groups, their signatures, what each delegates to, and the JSON shape returned.
 
 For the lifecycle context behind each command, see `docs/workflows.md`. For the dispatcher and module patterns, see `docs/architecture.md`.
 
@@ -12,7 +12,7 @@ ce-automation exposes a single `ce` command. The first argument is a `group:acti
 pnpm ce <group:action> [args...]
 ```
 
-All implemented commands return JSON on stdout (pretty-printed) and exit 0 on success. On failure they write a single-line error to stderr and exit 1. Blocked commands exit 2 with an ADR reference.
+Commands returning a value print pretty-printed JSON on stdout and exit 0 on success. Commands with a declared source print `Source: <source>` immediately before that JSON. Commands returning `undefined` print nothing and exit 0. On failure they write a single-line error to stderr and exit 1.
 
 ## Group: `courses`
 
@@ -77,17 +77,13 @@ Registration-form publishing, Op 2.
 
 Feedback-form lifecycle, Op 7 + after-course collection.
 
-### `ce feedback:publish --id <recordId>`
+### `ce feedback:publish --id <recordId> --yes`
 
-- **Args**: `--id <recordId>` (required)
-- **Delegates to (locally composed)**:
-  - `airtable:fetch-record --id` to fetch course fields
-  - `drive:duplicate --file-id 1AL97T_D6DlJoBym3PmDeesV2ifbQCPe9D6YJyODN0zM` (feedback template)
-  - `drive:find-folder --name <term-folder>` (or create — TBD)
-  - `forms:*` to edit title + description (Forms-auth-config slug)
-  - Airtable update to write `feedback-form-link` back (path TBD — see workflows.md Op 7)
-- **Returns**: `{ recordId, feedbackFormId, feedbackFormLink, termFolderId }` (target shape).
-- **Status**: roadmap
+- **Args**: `--id <recordId>` and explicit `--yes` confirmation are required.
+- **Delegates to**: api-integrator's `feedback:publish --id <recordId> --yes`.
+- **Behavior**: duplicates the feedback template, moves it to the current term folder, sets a course-specific title and description, preserves template questions, and writes the link to Airtable's `feedback-form` field.
+- **Returns**: `{ recordId, feedbackFormId, feedbackFormLink, termFolderId }`.
+- **Status**: implemented
 
 ### `ce feedback:collect --id <recordId>`
 
@@ -119,7 +115,7 @@ Email create (Op 4) and send (Op 5).
 - **Args**: `--id <recordId>` (required); `--to <addr1,addr2,...>` (optional, overrides `CE_EMAIL_RECIPIENTS` for this invocation per ADR-0005); `--force` (optional boolean, bypasses the timing-rule check).
 - **Delegates to (locally composed)**: `airtable:fetch-record --id` (single fetch — needs `start-date` for the timing rule and the same fields Op 4 renders); `lib/clock.ts` `emailSendDeadline` computes the send deadline (Tuesday +2 wks before course start); the Op 4 `renderEmailDraft` pure function re-renders subject + body; on/after the deadline (or with `--force`), a pre-flight `checkGwsAuth` gate (spawns `gws auth status`, parses JSON — see `lib/gws-auth.ts` and `docs/gws-authentication.md`) verifies gws is authenticated, then `gws:exec gmail +send --to <addr> ... --subject <s> --body <b>` sends via the gws CLI's high-level `+send` helper (which handles RFC 5322 MIME + base64 internally). The subject is RFC 2047 B-encoded first (`lib/rfc2047.ts`, `=?UTF-8?B?...?=`) — gws mangles raw non-ASCII subjects (Latin-1 double-encoding mojibake) and RFC 5322 requires ASCII headers anyway; the dry-run payload's `subject` field stays human-readable. The gate is skipped on dry-run and before-deadline paths.
 - **Recipient resolution**: `--to` flag (comma-separated, trimmed, empties dropped) → `CE_EMAIL_RECIPIENTS` env var → `MissingRecipientsError`. Never silently sends to nobody.
-- **Returns**: `{ recordId, sent: false, plannedSendAt }` when before the deadline and `--force` is not set; `{ recordId, sent: true, sentAt, messageId }` after a successful send (`messageId` from `result.data.id`, `null` if absent); `{ recordId, sent: false, dryRun: true, recipients, subject, body, sendArgs }` when `CE_DRY_RUN=true` (no gws call).
+- **Returns**: `{ recordId, sent: false, plannedSendAt }` when before the deadline and `--force` is not set; `{ recordId, sent: true, sentAt, messageId }` after a successful send (`messageId` from `result.data.id`, `null` if absent); `{ recordId, sent: false, dryRun: true, recipients, subject, body, sendArgs }` when `CE_DRY_RUN=true` (the course record is still fetched, but no gws auth check or send occurs).
 - **Errors raised**: `MissingRecipientsError`, `MissingStartDateError`, `GwsAuthError` (pre-flight gate failure, with remediation hints), `ApiIntegratorError` (gws send failure).
 - **Status**: implemented
 
@@ -130,7 +126,7 @@ One-time-per-machine setup helpers. Not lifecycle ops — these prepare a depend
 ### `ce auth:gws [--scopes <csv>]`
 
 - **Args**: `--scopes <drive,gmail,sheets,forms>` (optional, defaults to `drive,gmail,sheets,forms`)
-- **Delegates to (locally composed)**: `lib/gws-auth.ts` `readGwsAuthStatus` pre-checks the OAuth client (file on disk, env vars, or prior `gws auth setup`); if missing, throws `GwsClientError` with setup guidance. If an OAuth client exists and gws is not yet authenticated, spawns `gws auth login -s <scopes>` with inherited stdio (opens the host browser for OAuth consent — run on a machine with a browser). After login (or skipped if already authed), `checkGwsAuth` verifies `auth_method` is set and non-`none` (real value: `oauth2`) + `storage!=none`.
+- **Delegates to (locally composed)**: `lib/gws-auth.ts` `readGwsAuthStatus` pre-checks the OAuth client (file on disk, env vars, or prior `gws auth setup`); if missing, throws `GwsClientError` with setup guidance. Login is skipped only when `auth_method` is `oauth` and `storage` is not `none`; otherwise it spawns `gws auth login -s <scopes>` with inherited stdio (opens the host browser for OAuth consent — run on a machine with a browser). After login (or skipped login), `checkGwsAuth` verifies `auth_method` is set and non-`none` and `storage!=none`.
 - **Returns**: `{ authenticated: true, authMethod, credentialSource, scopes, loginSkipped }`.
 - **Errors raised**: `GwsClientError` (no OAuth client — lists the three ways to provide one), `GwsAuthError` (post-login verification failed), `Error` (login exited non-zero).
 - **Interactive**: yes — the `gws auth login` step opens a browser and blocks until consent completes. No browser-less fallback for personal Gmail (see `docs/gws-authentication.md`).
@@ -143,9 +139,9 @@ Op 3.
 ### `ce website:update --id <recordId>`
 
 - **Args**: `--id <recordId>` (required)
-- **Delegates to**: undecided.
-- **Returns**: TBD.
-- **Status**: blocked — see follow-up ADR (mechanism undecided: Sheets-driven static site, Obsidian-driven site, or CMS API).
+- **Delegates to**: `supabase:course:sync-airtable --id <recordId>`.
+- **Returns**: `{ recordId, course, news }`; course includes `{ action, airtableRecordId, term, course }`, and news is the upserted website news row.
+- **Status**: implemented. Syncs a ready Airtable course and upserts its website news. News content uses the email announcement template; its date comes from Airtable `start-date` and must be `YYYY-MM-DD`.
 
 ## Group: `promote`
 
@@ -256,6 +252,7 @@ Raw passthrough to the Google Workspace CLI wrapper.
 
 - **Args**: any number of args joined with spaces and passed as the gws command
 - **Delegates to**: `gws:exec <args...>`
+- **Deletion safety**: GWS delete/remove/trash commands require `--yes`, forwarded to api-integrator for enforcement.
 - **Returns**: parsed JSON stdout from the gws CLI binary.
 - **Status**: implemented
 
@@ -267,6 +264,7 @@ Raw passthrough to the Obsidian CLI wrapper.
 
 - **Args**: any number of args joined with spaces and passed as the Obsidian CLI command
 - **Delegates to**: `obsidian:exec <args...>`
+- **Deletion safety**: `delete` requires `--yes`, forwarded to api-integrator for enforcement.
 - **Returns**: parsed JSON stdout from the Obsidian CLI binary.
 - **Status**: implemented
 

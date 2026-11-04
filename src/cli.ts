@@ -5,6 +5,8 @@ import { commands as primitivesCommands } from "./commands/primitives.ts";
 import { commands as emailCommands } from "./commands/email.ts";
 import { commands as authCommands } from "./commands/auth.ts";
 import { commands as supabaseCommands } from "./commands/supabase.ts";
+import { commands as websiteCommands } from "./commands/website.ts";
+import { commands as feedbackCommands } from "./commands/feedback.ts";
 import type { CommandMap } from "./lib/command.ts";
 
 const commands: CommandMap = {
@@ -15,6 +17,8 @@ const commands: CommandMap = {
   ...emailCommands,
   ...authCommands,
   ...supabaseCommands,
+  ...websiteCommands,
+  ...feedbackCommands,
 };
 
 function printHelp(): void {

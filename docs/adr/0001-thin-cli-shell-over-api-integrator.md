@@ -10,7 +10,7 @@
 
 `ce-automation` exists to give the CE admin a single operational surface for the full course-publishing lifecycle. It must not duplicate api-integrator's service-adapter logic. Three relationship options were considered:
 
-1. **Thin CLI shell over api-integrator** — ce-automation exposes a `ce` command whose modules delegate to api-integrator's CLI for implemented operations and compose api-integrator's primitive CLI commands for unimplemented operations (#3 website, #4 email create, #5 email send, #6 promote, #7 feedback form, #8 QR code).
+1. **Thin CLI shell over api-integrator** — ce-automation exposes a `ce` command whose modules delegate to api-integrator's CLI for implemented operations and compose api-integrator's primitive CLI commands for unimplemented operations (#4 email create, #5 email send, #6 promote, #8 QR code).
 2. **Successor that supersedes api-integrator** — ce-automation becomes the production home; api-integrator is archived as R&D.
 3. **Workspace dependency with source imports** — pnpm workspace link; ce-automation imports api-integrator's barrels directly via tsx.
 

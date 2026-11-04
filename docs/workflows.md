@@ -21,11 +21,11 @@ For the per-command JSON shapes, see `docs/features.md`. For the relationship an
 | 1   | Before  | `ce courses:fetch --id`        | Passthrough → `airtable:fetch-record --id`   | implemented |
 | 2   | Before  | `ce registration:publish-all`  | Passthrough → `registration:publish-all`     | implemented |
 | 2   | Before  | `ce registration:publish --id` | Passthrough → `registration:publish --id`    | implemented |
-| 3   | Before  | `ce website:update`            | Local orchestration                          | blocked     |
+| 3   | Before  | `ce website:update`            | Airtable → Supabase website course sync      | implemented |
 | 4   | Before  | `ce email:create`              | Local orchestration                          | implemented |
 | 5   | Before  | `ce email:send`                | Local orchestration                          | implemented |
 | 6   | Before  | `ce promote:run`               | Local orchestration                          | blocked     |
-| 7   | Before  | `ce feedback:publish`          | Local orchestration                          | roadmap     |
+| 7   | Before  | `ce feedback:publish --id`     | Passthrough → `feedback:publish`             | implemented |
 | 8   | Before  | `ce qr:generate`               | Local orchestration                          | blocked     |
 | —   | During  | `ce registration:stop`         | Local orchestration                          | roadmap     |
 | —   | After   | `ce feedback:collect`          | Local orchestration                          | roadmap     |
@@ -101,15 +101,16 @@ implemented (passthrough).
 
 After Op 2 writes the registration form link back to Airtable. Ensures the website reflects the new course.
 
-### Steps (target)
+### Steps
 
-1. `ce website:update` orchestrator calls `runApiIntegrator('airtable:fetch-record', ['--id', recordId])` to fetch the course.
-2. Calls `runApiIntegrator('supabase:ensure-current-term')` to ensure the current term exists in the Supabase `term` table.
-3. Pushes course info to the website platform (mechanism undecided).
+1. CE admin runs `ce website:update --id <recordId>` after publishing the registration form.
+2. ce-automation fetches the Airtable record and syncs its ready course through `supabase:course:sync-airtable --id <recordId>`.
+3. It upserts a website news row through `supabase:news:upsert`, mapping the course title, rendered announcement content, `start-date`, and registration link to the website's `news` table. A stable UUID derived from the Airtable record ID ensures repeat runs update the same news row.
+4. api-integrator finds or creates the course's year/term and inserts or updates the course by `(term_id, title)`. The website reads both courses and news directly from Supabase; no separate deploy is needed.
 
 ### Status
 
-blocked. The website platform and push mechanism are undecided. Follow-up ADR required: candidates include Sheets-driven static site, Obsidian-driven site, or a CMS API.
+implemented. The website uses Supabase for courses and news. The sync uses the Airtable record's own term and year, safely rejects ambiguous duplicate course titles, and repeatably updates one news row per Airtable record. See ADR-0006.
 
 ## Op 4 — Create email
 
@@ -157,7 +158,7 @@ implemented.
 
 Two Sundays before the course start day.
 
-### Steps (target)
+### Steps
 
 1. `ce promote:run` orchestrator computes the promotion day from the course start date via `lib/clock.ts`.
 2. Publishes the promotion to a channel — mechanism undecided.
@@ -178,17 +179,16 @@ Before the course ends, so the QR code (Op 8) can be generated in time.
 
 ### Steps (target)
 
-1. `ce feedback:publish` orchestrator fetches the course via `airtable:fetch-record --id`.
-2. Calls `runApiIntegrator('drive:duplicate', ['--file-id', FEEDBACK_TEMPLATE_ID])` to duplicate the feedback form template.
-   - `FEEDBACK_TEMPLATE_ID = 1AL97T_D6DlJoBym3PmDeesV2ifbQCPe9D6YJyODN0zM` (per api-integrator README).
-3. Resolves the current term folder via `drive:find-folder` (or creates if absent — mechanism TBD).
-4. Moves the duplicated form into the term folder.
-5. Edits the form content — title + description substituted with course fields — via `forms:*` (Drive-auth-config slug for create/move; Forms-auth-config slug for edit). Mirrors Op 2's dual-connection requirement.
-6. Writes the feedback form link back to Airtable. Path undecided: (a) api-integrator adds an `airtable:update-record` CLI command, (b) ce-automation composes `airtable:fetch-record` + `gws:exec sheets append` only if course data is mirrored to Sheets, or (c) defer the write-back until api-integrator exposes writes. Tracked as part of Op 7 roadmap.
+1. CE admin runs `ce feedback:publish --id <recordId> --yes` to confirm the external form creation.
+2. ce-automation delegates to api-integrator's `feedback:publish --id <recordId> --yes` domain command.
+3. api-integrator validates the course is ready and has no `feedback-form` link, then duplicates template `1AL97T_D6DlJoBym3PmDeesV2ifbQCPe9D6YJyODN0zM`.
+4. Resolves the current term Drive folder (creating it under the configured CE root if absent) and moves the duplicate there.
+5. Sets the title to `課程回饋表 - {course title}` and applies the course description/details to the form. The template's feedback questions are preserved.
+6. Writes the resulting form URL to Airtable's `feedback-form` field and returns `{ recordId, feedbackFormId, feedbackFormLink, termFolderId }`.
 
 ### Status
 
-roadmap.
+implemented.
 
 ## Op 8 — Generate QR code for feedback form
 
@@ -324,11 +324,11 @@ Ported from api-integrator `README.md` §Publishing Operations:
 
 1. Fetch course data from Airtable — **Op 1** (implemented)
 2. Publish registration form — **Op 2** (implemented)
-3. Update website with course info — **Op 3** (blocked)
+3. Update website with course info — **Op 3** (implemented)
 4. Create announcement email — **Op 4** (implemented)
 5. Send announcement email (Tuesday +2 wks before start) — **Op 5** (implemented)
 6. Promote (2 Sundays before start) — **Op 6** (blocked)
-7. Create feedback form from template — **Op 7** (roadmap)
+7. Create feedback form from template — **Op 7** (implemented)
 8. Generate QR code for feedback form — **Op 8** (blocked)
 
 ### During course

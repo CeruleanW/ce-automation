@@ -54,6 +54,7 @@ ce-automation reads its own `.env`. All of its keys are optional:
 API_INTEGRATOR_DIR=/ai-projects/api-integrator
 CE_DRY_RUN=
 CE_NOW_OVERRIDE=
+CE_EMAIL_RECIPIENTS=
 ```
 
 Everything else lives in api-integrator's `.env`. The CE admin provisions it once. Keys the CE admin must set there (names only; values are secrets):
@@ -183,11 +184,11 @@ Fix by aligning api-integrator to a known-good revision and re-running.
 
 ### `BlockedOpError: <command> is blocked — see ADR-NNNN`
 
-The command depends on an undecided mechanism (Op 3, 6, or 8). Read the referenced ADR; if the mechanism has been chosen since the ADR was last updated, update the ADR and the command's status in `docs/workflows.md` before trying again.
+The command depends on an undecided mechanism (Op 6 or 8). Read the referenced ADR and workflow status before trying again. Op 3 website updates use the Supabase sync documented in ADR-0006.
 
-### `pnpm ce` not found
+### `pnpm ce` fails
 
-ce-automation's `package.json` has not been created yet (ADR-0003 pending). Until then, no `ce` script exists. Implementation cannot start until ADR-0003 lands.
+Install this repository's dependencies with `pnpm install`, then run `pnpm ce <command>`. If it still fails, confirm that `package.json` contains the `ce` script and that your Node version is at least 20.
 
 ## References
 

@@ -21,7 +21,7 @@ See:
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  ce-automation  src/cli.ts                                   │
-│  dispatcher: argv → command module → JSON stdout            │
+│  dispatcher: argv → command module → source + JSON stdout   │
 │                                                              │
 │  ┌────────────┐  ┌──────────────┐  ┌──────────────────────┐ │
 │  │ commands/  │  │ orchestrators/│  │ lib/                  │ │
@@ -56,16 +56,9 @@ src/
 │   ├── email.ts                ce email:create + email:send (Op 4 + Op 5)
 │   ├── auth.ts                 ce auth:gws (one-time gws login + verify)
 │   └── primitives.ts          ce drive:* / forms:* / gws:* / obsidian:* passthroughs
-├── orchestrators/              local multi-step logic for ops #3-#8 (email-create + email-send implemented; rest roadmap/blocked)
-│   ├── website-update.ts      op 3 — blocked pending mechanism ADR
-│   ├── email-create.ts        op 4 — implemented (inline template, returns JSON draft; exports pure renderEmailDraft for Op 5 reuse)
-│       ├── email-send.ts          op 5 — implemented (timing rule + ADR-0005 recipients + pre-flight gws auth gate + gws:exec send / CE_DRY_RUN)
-│   ├── promote-run.ts         op 6 — blocked pending channel ADR
-│   ├── feedback-publish.ts    op 7
-│   ├── qr-generate.ts         op 8 — blocked pending generator ADR
-│   ├── registration-stop.ts   during-course
-│   ├── feedback-collect.ts    after-course
-│   └── feedback-stop.ts       after-course
+├── orchestrators/              local multi-step logic
+│   ├── email-create.ts        op 4 — inline template; exports pure renderEmailDraft for Op 5 reuse
+│   └── email-send.ts          op 5 — timing rule, ADR-0005 recipients, gws auth gate, gws:exec send, and CE_DRY_RUN
 └── lib/
     ├── shell.ts                runApiIntegrator(cmd, args) — spawn pnpm, parse JSON; RunnerConfig interface
     ├── gws-auth.ts             checkGwsAuth() gate + readGwsAuthStatus() + hasGwsClient() (spawn `gws auth status`, parse JSON); GwsAuthError, GwsClientError, AuthStatus
@@ -75,21 +68,21 @@ src/
     └── command.ts              Command / CommandMap types
 ```
 
-**Co-location rule**: every command in `commands/` and every orchestrator in `orchestrators/` has a paired unit test (`*.test.ts`) in the same directory, mirroring api-integrator's co-location convention.
+Tests currently cover the dispatcher, `lib/` utilities, and both implemented email orchestrators. Command modules do not yet have dedicated unit-test files.
 
 ## Patterns ported from api-integrator
 
 ### 1. Command dispatcher shape
 
-`src/cli.ts` mirrors api-integrator's `src/cli.ts` lines 27-201: a `commands` object literal keyed by command name, each entry `{ description, run(args) }`. `main(argv)` takes argv as a parameter (testable), dispatches, prints `JSON.stringify(result, null, 2)` on success, writes to `console.error` on failure, returns an exit code. `src/run.ts` is the actual entry: reads `process.argv.slice(2)`, calls `main`, and `process.exit`s on non-zero.
+`src/cli.ts` uses a `commands` object literal keyed by command name, each entry `{ description, source?, run(args) }`. `main(argv)` takes argv as a parameter (testable), dispatches, prints `Source: <source>` when supplied and then `JSON.stringify(result, null, 2)` for non-`undefined` results, writes to `console.error` on failure, and returns an exit code. `src/run.ts` is the actual entry: reads `process.argv.slice(2)`, calls `main`, and `process.exit`s on non-zero.
 
 ### 2. `parseArgs` for flags
 
 Use `node:util` `parseArgs` with kebab-case option names, mirroring api-integrator's `--id`, `--name`, `--file-id`, `--titles`.
 
-### 3. Dynamic import inside `run()`
+### 3. Static command registration
 
-The `run` body uses `await import('./commands/<x>.ts')` rather than top-level static imports, mirroring api-integrator's lazy-load pattern. Keeps cold-start fast and allows test mocks to register before the system-under-test loads.
+`src/cli.ts` statically imports each command map and combines them into the dispatcher map. Command modules import their dependencies directly.
 
 ### 4. Config-injection seam
 
@@ -105,20 +98,16 @@ export interface RunnerConfig {
 
 Production wiring passes the real `runApiIntegrator`, `() => new Date()`, and the real `checkGwsAuth` (spawns `gws auth status` — see `lib/gws-auth.ts`). Unit tests pass a fake `runApiIntegrator` that returns scripted JSON, a fixed `now` for deterministic timing-rule tests, and a mock `checkGwsAuth` so the gws auth gate never spawns a real process. Mirrors api-integrator's `AirtableConfig` injection pattern in `features/airtable/airtable-api.ts`.
 
-### 5. Production-data guards
-
-Integration tests (`*.spec.ts`) include runtime guards that throw if env vars point at production Airtable base/table IDs or production Drive folder IDs. Mirrors api-integrator's `CE_CLASS_BASE_ID` / `GENERATED_DIRECTORY_ID` guard pattern.
-
 ## Env var contract
 
 ### Own env vars (read by ce-automation)
 
-| Var                   | Required | Purpose                                                                                    | Default                       |
-| --------------------- | -------- | ------------------------------------------------------------------------------------------ | ----------------------------- |
-| `API_INTEGRATOR_DIR`  | no       | Path to api-integrator repo                                                                | `/ai-projects/api-integrator` |
-| `CE_DRY_RUN`          | no       | If `true`, orchestrators log the sequence of `runApiIntegrator` calls without spawning     | (unset)                       |
-| `CE_NOW_OVERRIDE`     | no       | ISO date; overrides "now" for timing-rule tests of email/promote                           | (unset)                       |
-| `CE_EMAIL_RECIPIENTS` | no       | Comma-separated email addresses; default recipient list for `ce email:send` (per ADR-0005) | (unset)                       |
+| Var                   | Required | Purpose                                                                                     | Default                       |
+| --------------------- | -------- | ------------------------------------------------------------------------------------------- | ----------------------------- |
+| `API_INTEGRATOR_DIR`  | no       | Path to api-integrator repo                                                                 | `/ai-projects/api-integrator` |
+| `CE_DRY_RUN`          | no       | If `true`, `ce email:send` fetches and renders the course email but skips gws auth and send | (unset)                       |
+| `CE_NOW_OVERRIDE`     | no       | ISO date; overrides "now" for timing-rule tests of email/promote                            | (unset)                       |
+| `CE_EMAIL_RECIPIENTS` | no       | Comma-separated email addresses; default recipient list for `ce email:send` (per ADR-0005)  | (unset)                       |
 
 ### Delegated env vars (read by api-integrator via its own `.env`)
 

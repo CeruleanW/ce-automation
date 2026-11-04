@@ -140,6 +140,97 @@ describe("cli main", () => {
     expect(runApiIntegratorMock).not.toHaveBeenCalled();
   });
 
+  it("requires approval before publishing a feedback form", async () => {
+    const code = await main(["feedback:publish", "--id", "rec123"]);
+
+    expect(code).toBe(1);
+    expect(errSpy).toHaveBeenCalledWith(
+      "Creating a Google Form makes external changes; rerun with --yes after reviewing the course.",
+    );
+    expect(runApiIntegratorMock).not.toHaveBeenCalled();
+  });
+
+  it("forwards approved feedback-form publishing to api-integrator", async () => {
+    runApiIntegratorMock.mockResolvedValue({ feedbackFormId: "form123" });
+
+    const code = await main(["feedback:publish", "--id", "rec123", "--yes"]);
+
+    expect(code).toBe(0);
+    expect(runApiIntegratorMock).toHaveBeenCalledWith("feedback:publish", [
+      "--id",
+      "rec123",
+      "--yes",
+    ]);
+  });
+
+  it("syncs the requested course to the website", async () => {
+    const course = { action: "created", airtableRecordId: "rec123" };
+    const news = { id: "news-123" };
+    runApiIntegratorMock.mockImplementation(async (command: string) => {
+      if (command === "airtable:fetch-record") {
+        return {
+          id: "rec123",
+          fields: {
+            title: "Course A",
+            term: "Fall",
+            "start-date": "2026-09-15",
+            "short-description-for-news-or-poster": "Course intro",
+            "form-link": "https://forms.example/course-a",
+          },
+        };
+      }
+      if (command === "supabase:course:sync-airtable") return course;
+      if (command === "supabase:news:upsert") return news;
+      return undefined;
+    });
+
+    const code = await main(["website:update", "--id", "rec123"]);
+
+    expect(code).toBe(0);
+    expect(runApiIntegratorMock).toHaveBeenNthCalledWith(
+      1,
+      "airtable:fetch-record",
+      ["--id", "rec123"],
+    );
+    expect(runApiIntegratorMock).toHaveBeenNthCalledWith(
+      2,
+      "supabase:course:sync-airtable",
+      ["--id", "rec123"],
+    );
+    const newsArgs = runApiIntegratorMock.mock.calls[2]?.[1] as string[];
+    expect(runApiIntegratorMock).toHaveBeenNthCalledWith(
+      3,
+      "supabase:news:upsert",
+      expect.arrayContaining([
+        "--title",
+        "Course A",
+        "--content",
+        expect.stringContaining("Course intro"),
+        "--date",
+        "2026-09-15",
+        "--form-link",
+        "https://forms.example/course-a",
+      ]),
+    );
+    expect(newsArgs[1]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(logSpy).toHaveBeenCalledWith(
+      "Source: Airtable → website Supabase course and news sync",
+    );
+    expect(logSpy).toHaveBeenCalledWith(
+      JSON.stringify({ recordId: "rec123", course, news }, null, 2),
+    );
+  });
+
+  it("requires --id for website:update", async () => {
+    const code = await main(["website:update"]);
+
+    expect(code).toBe(1);
+    expect(errSpy).toHaveBeenCalledWith("Missing required --id <recordId>");
+    expect(runApiIntegratorMock).not.toHaveBeenCalled();
+  });
+
   it("returns 1 when gws:exec has no args", async () => {
     const code = await main(["gws:exec"]);
     expect(code).toBe(1);
